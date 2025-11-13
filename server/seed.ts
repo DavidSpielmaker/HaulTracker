@@ -8,13 +8,19 @@ import {
   serviceAreas,
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import bcrypt from "bcrypt";
 
 async function seed() {
   console.log("🌱 Seeding database...");
 
+  // Generate password hash for "admin123"
+  const passwordHash = await bcrypt.hash("admin123", 10);
+  console.log("✅ Generated password hash");
+
   // Create first organization - 1 Call Junk Removal
   const [org] = await db.insert(organizations).values({
     name: "1 Call Junk Removal",
+    slug: "1-call-junk-removal",
     businessName: "1 Call Junk Removal LLC",
     email: "info@1calljunkremoval.com",
     phone: "(816) 661-1759",
@@ -25,6 +31,10 @@ async function seed() {
     serviceAreaRadius: 30,
     taxRate: "0.0875", // 8.75% tax rate for Kansas City
     status: "active",
+    website: "https://www.1calljunkremoval.com",
+    logo: null,
+    primaryColor: "211 85% 42%",
+    secondaryColor: "211 85% 42%",
   }).returning();
 
   console.log("✅ Created organization:", org.name);
@@ -48,7 +58,7 @@ async function seed() {
   // Create super admin user
   const [superAdmin] = await db.insert(users).values({
     email: "admin@dumpsterpro.com",
-    passwordHash: "$2a$10$rKjKZqMb9Z9VN4J8VqYxKOxWxZYJHx4Kx5YFxJxYxJxYxJxYxJxY", // password: admin123
+    passwordHash: passwordHash,
     firstName: "Super",
     lastName: "Admin",
     phone: "(555) 000-0000",
@@ -61,7 +71,7 @@ async function seed() {
   // Create organization owner
   const [owner] = await db.insert(users).values({
     email: "owner@1calljunkremoval.com",
-    passwordHash: "$2a$10$rKjKZqMb9Z9VN4J8VqYxKOxWxZYJHx4Kx5YFxJxYxJxYxJxYxJxY", // password: admin123
+    passwordHash: passwordHash,
     firstName: "John",
     lastName: "Doe",
     phone: "(816) 661-1759",
