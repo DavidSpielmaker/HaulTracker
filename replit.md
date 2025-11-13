@@ -15,16 +15,26 @@ This platform allows dumpster rental companies to:
 
 ### ✅ Completed
 - **Database Schema**: Full multi-tenant schema with organizations, users, dumpster types, inventory, bookings, payments, service areas
+- **Organization Management System** (Super Admin):
+  - CRUD operations for organizations with proper validation (drizzle-zod)
+  - Admin dashboard with create/edit/delete capabilities
+  - Public organization lookup by slug (sanitized - safe fields only)
+  - Branding fields: slug, logo, website, primaryColor, secondaryColor
+  - Protected routes with role-based access control (super_admin only)
+  - Security hardening: data sanitization, route protection, schema validation
 - **Frontend Prototype**: Complete UI components for public booking pages and business dashboard
-- **First Tenant**: "1 Call Junk Removal" (816) 661-1759 - fully configured with Kansas City service area
+- **First Tenant**: "1 Call Junk Removal" (slug: 1-call-junk-removal) - fully configured with Kansas City service area
 - **Seed Data**: 4 dumpster sizes, 41 inventory units, 32 service area ZIP codes
 
 ### 🚧 In Progress
-- Organization management (super admin features)
-- Multi-tenant routing for branded booking pages
+- Organization-specific branded booking pages (/org/:slug)
+- Organization-scoped login UI (/org/:slug/login)
+
+### 📋 Next Steps
+- Dumpster types and inventory management UI
 - Booking flow with availability checking
 - Stripe payment integration
-- Business dashboard backend
+- Business dashboard with calendar view
 - Email notifications
 
 ### ✅ Authentication System (Core Complete - Org-Scoped Login in Task 3)
