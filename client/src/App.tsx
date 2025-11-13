@@ -11,6 +11,8 @@ import DashboardLogin from "@/pages/DashboardLogin";
 import DashboardHome from "@/pages/DashboardHome";
 import AdminDashboard from "@/pages/AdminDashboard";
 import OrganizationForm from "@/pages/OrganizationForm";
+import BookingPage from "@/pages/BookingPage";
+import OrgLogin from "@/pages/OrgLogin";
 
 function Router() {
   return (
@@ -22,6 +24,9 @@ function Router() {
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/organizations/new" component={OrganizationForm} />
       <Route path="/admin/organizations/:id" component={OrganizationForm} />
+      {/* Organization-specific routes */}
+      <Route path="/org/:slug/login" component={OrgLogin} />
+      <Route path="/org/:slug" component={BookingPage} />
       <Route component={NotFound} />
     </Switch>
   );
