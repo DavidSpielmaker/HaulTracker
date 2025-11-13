@@ -73,7 +73,7 @@ export default function BookingPage() {
   return (
     <div className="min-h-screen" style={brandingStyle}>
       {/* Header with organization branding */}
-      <header className="border-b bg-card">
+      <header className="border-b" style={{ backgroundColor: `hsl(var(--org-primary))` }}>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -86,10 +86,10 @@ export default function BookingPage() {
                 />
               )}
               <div>
-                <h1 className="text-2xl font-bold" data-testid="text-org-name">
+                <h1 className="text-2xl font-bold text-primary-foreground" data-testid="text-org-name">
                   {organization.name}
                 </h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-primary-foreground/80">
                   {organization.city}, {organization.state}
                 </p>
               </div>
@@ -97,7 +97,7 @@ export default function BookingPage() {
             <div className="flex items-center gap-4">
               <a
                 href={`tel:${organization.phone}`}
-                className="flex items-center gap-2 text-sm hover-elevate px-3 py-2 rounded-md"
+                className="flex items-center gap-2 text-sm text-primary-foreground hover-elevate px-3 py-2 rounded-md"
                 data-testid="link-phone"
               >
                 <Phone className="w-4 h-4" />
@@ -108,7 +108,7 @@ export default function BookingPage() {
                   href={organization.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm hover-elevate px-3 py-2 rounded-md"
+                  className="flex items-center gap-2 text-sm text-primary-foreground hover-elevate px-3 py-2 rounded-md"
                   data-testid="link-website"
                 >
                   <Globe className="w-4 h-4" />
@@ -132,14 +132,26 @@ export default function BookingPage() {
             </CardHeader>
             <CardContent>
               <div className="text-center py-12">
-                <MapPin className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <MapPin className="w-12 h-12 mx-auto mb-4" style={{ color: `hsl(var(--org-primary))` }} />
                 <p className="text-muted-foreground">
                   Booking form coming soon. This is the branded booking page for{" "}
-                  <span className="font-semibold">{organization.name}</span>.
+                  <span className="font-semibold" style={{ color: `hsl(var(--org-primary))` }}>
+                    {organization.name}
+                  </span>.
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
                   Organization ID: {organization.id} | Slug: {organization.slug}
                 </p>
+                <Button 
+                  className="mt-6"
+                  style={{ 
+                    backgroundColor: `hsl(var(--org-primary))`,
+                    color: 'white'
+                  }}
+                  data-testid="button-book-now"
+                >
+                  Book Now (Coming Soon)
+                </Button>
               </div>
             </CardContent>
           </Card>

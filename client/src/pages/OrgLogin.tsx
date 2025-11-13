@@ -60,8 +60,8 @@ export default function OrgLogin() {
         title: "Success",
         description: "You've been logged in successfully.",
       });
-      // Redirect to organization dashboard
-      setLocation(`/org/${params.slug}/dashboard`);
+      // Redirect to general dashboard (org-specific dashboard coming soon)
+      setLocation("/dashboard");
     },
     onError: (error: Error) => {
       toast({
@@ -179,6 +179,10 @@ export default function OrgLogin() {
               <Button
                 type="submit"
                 className="w-full"
+                style={{
+                  backgroundColor: `hsl(var(--org-primary))`,
+                  color: 'white'
+                }}
                 disabled={loginMutation.isPending}
                 data-testid="button-login"
               >
@@ -199,7 +203,8 @@ export default function OrgLogin() {
               Need access?{" "}
               <button
                 onClick={() => setLocation(`/org/${params.slug}`)}
-                className="text-primary hover:underline"
+                className="hover:underline"
+                style={{ color: `hsl(var(--org-primary))` }}
                 data-testid="link-booking-page"
               >
                 Return to booking page
