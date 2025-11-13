@@ -14,25 +14,29 @@ const steps = [
 export default function BookingProgress({ currentStep }: BookingProgressProps) {
   return (
     <div className="w-full py-8" data-testid="booking-progress">
-      <div className="max-w-3xl mx-auto">
-        {/* Circles and connector lines row */}
-        <div className="relative flex items-center mb-2">
-          {steps.map((step, index) => {
-            const stepNumber = index + 1;
-            const isCompleted = stepNumber < currentStep;
-            const isCurrent = stepNumber === currentStep;
+      <div className="max-w-3xl mx-auto px-4">
+        <div className="relative">
+          {/* Background line */}
+          <div className="absolute top-5 left-0 right-0 h-0.5 bg-muted" style={{ left: '5%', right: '5%' }} />
+          
+          {/* Progress line */}
+          <div 
+            className="absolute top-5 left-0 h-0.5 bg-primary transition-all duration-300"
+            style={{ 
+              left: '5%',
+              width: `${((currentStep - 1) / (steps.length - 1)) * 90}%`
+            }}
+          />
+          
+          {/* Steps */}
+          <div className="relative flex justify-between">
+            {steps.map((step, index) => {
+              const stepNumber = index + 1;
+              const isCompleted = stepNumber < currentStep;
+              const isCurrent = stepNumber === currentStep;
 
-            return (
-              <div key={index} className="flex-1 flex items-center justify-center">
-                <div className="flex items-center w-full">
-                  {index > 0 && (
-                    <div 
-                      className={`flex-1 h-0.5 transition-colors ${
-                        isCompleted || (index < currentStep) ? 'bg-primary' : 'bg-muted'
-                      }`}
-                      data-testid={`step-connector-${index}`}
-                    />
-                  )}
+              return (
+                <div key={index} className="flex flex-col items-center">
                   <div 
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-colors ${
                       isCompleted 
@@ -40,42 +44,21 @@ export default function BookingProgress({ currentStep }: BookingProgressProps) {
                         : isCurrent 
                         ? 'bg-primary text-primary-foreground' 
                         : 'bg-muted text-muted-foreground'
-                    } ${index > 0 ? 'mx-2' : ''} ${index < steps.length - 1 ? 'mx-2' : ''}`}
+                    }`}
                     data-testid={`step-indicator-${stepNumber}`}
                   >
                     {isCompleted ? <Check className="h-5 w-5" /> : stepNumber}
                   </div>
-                  {index < steps.length - 1 && (
-                    <div 
-                      className={`flex-1 h-0.5 transition-colors ${
-                        isCompleted ? 'bg-primary' : 'bg-muted'
-                      }`}
-                      data-testid={`step-connector-${stepNumber}`}
-                    />
-                  )}
+                  <span 
+                    className={`mt-2 text-sm font-medium text-center ${isCurrent ? 'text-foreground' : 'text-muted-foreground'}`} 
+                    data-testid={`step-label-${stepNumber}`}
+                  >
+                    {step}
+                  </span>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-        
-        {/* Labels row */}
-        <div className="flex">
-          {steps.map((step, index) => {
-            const stepNumber = index + 1;
-            const isCurrent = stepNumber === currentStep;
-            
-            return (
-              <div key={index} className="flex-1 flex justify-center">
-                <span 
-                  className={`text-sm font-medium ${isCurrent ? 'text-foreground' : 'text-muted-foreground'}`} 
-                  data-testid={`step-label-${stepNumber}`}
-                >
-                  {step}
-                </span>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
