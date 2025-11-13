@@ -109,7 +109,7 @@ export default function Home() {
 
       <footer className="border-t py-8">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p data-testid="text-footer">© 2024 DumpsterPro. All rights reserved.</p>
+          <p data-testid="text-footer">© 2024 1 Call Junk Removal. All rights reserved.</p>
         </div>
       </footer>
     </div>

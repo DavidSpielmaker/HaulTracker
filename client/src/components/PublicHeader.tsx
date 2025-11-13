@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Truck } from "lucide-react";
+import { Truck, Phone } from "lucide-react";
 
 export default function PublicHeader() {
   return (
@@ -10,7 +10,7 @@ export default function PublicHeader() {
           <Link href="/">
             <a className="flex items-center gap-2 hover-elevate rounded-md px-3 py-2" data-testid="link-home">
               <Truck className="h-6 w-6 text-primary" />
-              <span className="text-xl font-semibold">DumpsterPro</span>
+              <span className="text-xl font-semibold">1 Call Junk Removal</span>
             </a>
           </Link>
 
@@ -33,13 +33,10 @@ export default function PublicHeader() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <Link href="/dashboard/login">
-              <a data-testid="link-dashboard-login">
-                <Button variant="ghost" size="sm">
-                  Dashboard Login
-                </Button>
-              </a>
-            </Link>
+            <a href="tel:8166611759" className="hidden sm:flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors" data-testid="link-phone">
+              <Phone className="h-4 w-4" />
+              (816) 661-1759
+            </a>
             <Link href="/book">
               <a data-testid="link-book-cta">
                 <Button size="sm">

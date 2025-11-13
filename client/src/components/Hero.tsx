@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import heroImage from "@assets/generated_images/Hero_image_facility_yard_05720e5d.png";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Phone } from "lucide-react";
 
 export default function Hero() {
   return (
@@ -15,11 +15,17 @@ export default function Hero() {
       <div className="container relative mx-auto px-4 h-full flex items-center">
         <div className="max-w-2xl text-white">
           <h1 className="text-5xl md:text-6xl font-bold mb-6" data-testid="text-hero-title">
-            Professional Dumpster Rental Made Simple
+            Kansas City's Premier Junk Removal & Dumpster Rental
           </h1>
           <p className="text-xl md:text-2xl mb-8 text-white/90" data-testid="text-hero-subtitle">
             Fast, reliable waste management solutions for your project. Same-day delivery available.
           </p>
+          <div className="flex items-center gap-2 text-white mb-8">
+            <Phone className="h-6 w-6" />
+            <a href="tel:8166611759" className="text-2xl font-semibold hover:underline" data-testid="link-hero-phone">
+              (816) 661-1759
+            </a>
+          </div>
           <div className="flex flex-wrap gap-4">
             <Link href="/book">
               <a data-testid="button-hero-book">
