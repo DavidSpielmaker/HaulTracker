@@ -16,6 +16,7 @@ export const quoteStatusEnum = pgEnum("quote_status", ["pending", "quoted", "acc
 export const organizations = pgTable("organizations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
   businessName: text("business_name").notNull(),
   email: text("email").notNull(),
   phone: text("phone").notNull(),
@@ -23,6 +24,10 @@ export const organizations = pgTable("organizations", {
   city: text("city").notNull(),
   state: text("state").notNull(),
   zip: text("zip").notNull(),
+  website: text("website"),
+  logo: text("logo"),
+  primaryColor: text("primary_color"),
+  secondaryColor: text("secondary_color"),
   serviceAreaRadius: integer("service_area_radius").default(25),
   taxRate: decimal("tax_rate", { precision: 5, scale: 4 }).default("0.0000"),
   stripeAccountId: text("stripe_account_id"),

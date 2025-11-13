@@ -9,6 +9,8 @@ import Home from "@/pages/Home";
 import BookingFlow from "@/pages/BookingFlow";
 import DashboardLogin from "@/pages/DashboardLogin";
 import DashboardHome from "@/pages/DashboardHome";
+import AdminDashboard from "@/pages/AdminDashboard";
+import OrganizationForm from "@/pages/OrganizationForm";
 
 function Router() {
   return (
@@ -17,6 +19,9 @@ function Router() {
       <Route path="/book" component={BookingFlow} />
       <Route path="/dashboard/login" component={DashboardLogin} />
       <Route path="/dashboard" component={DashboardHome} />
+      <Route path="/admin" component={AdminDashboard} />
+      <Route path="/admin/organizations/new" component={OrganizationForm} />
+      <Route path="/admin/organizations/:id" component={OrganizationForm} />
       <Route component={NotFound} />
     </Switch>
   );

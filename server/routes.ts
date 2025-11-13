@@ -5,7 +5,7 @@ import ConnectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
 import { storage } from "./storage";
 import { requireAuth, requireRole, type AuthRequest } from "./middleware/auth";
-import { insertUserSchema, type User } from "@shared/schema";
+import { insertUserSchema, insertOrganizationSchema, type User } from "@shared/schema";
 import { z } from "zod";
 
 const PgSession = ConnectPgSimple(session);
@@ -226,6 +226,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Admin stats error:", error);
       res.status(500).json({ message: "Failed to get stats" });
+    }
+  });
+
+  // Organization management routes (super_admin only)
+
+  // Get all organizations
+  app.get("/api/admin/organizations", requireAuth, requireRole("super_admin"), async (req: AuthRequest, res) => {
+    try {
+      const orgs = await storage.getAllOrganizations();
+      res.json(orgs);
+    } catch (error) {
+      console.error("Get organizations error:", error);
+      res.status(500).json({ message: "Failed to get organizations" });
+    }
+  });
+
+  // Get organization by ID
+  app.get("/api/admin/organizations/:id", requireAuth, requireRole("super_admin"), async (req: AuthRequest, res) => {
+    try {
+      const org = await storage.getOrganization(req.params.id);
+      if (!org) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+      res.json(org);
+    } catch (error) {
+      console.error("Get organization error:", error);
+      res.status(500).json({ message: "Failed to get organization" });
+    }
+  });
+
+  // Create organization
+  app.post("/api/admin/organizations", requireAuth, requireRole("super_admin"), async (req: AuthRequest, res) => {
+    try {
+      // Extend the insert schema to add slug validation regex
+      const createOrgSchema = insertOrganizationSchema.extend({
+        slug: z.string().min(1, "Slug is required").regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens"),
+      });
+
+      const validatedData = createOrgSchema.parse(req.body);
+
+      // Check if slug already exists
+      const existingOrg = await storage.getOrganizationBySlug(validatedData.slug);
+      if (existingOrg) {
+        return res.status(400).json({ message: "Organization with this slug already exists" });
+      }
+
+      const org = await storage.createOrganization(validatedData);
+      res.status(201).json(org);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      console.error("Create organization error:", error);
+      res.status(500).json({ message: "Failed to create organization" });
+    }
+  });
+
+  // Update organization
+  app.patch("/api/admin/organizations/:id", requireAuth, requireRole("super_admin"), async (req: AuthRequest, res) => {
+    try {
+      // Make all fields optional for partial updates, but maintain slug validation if provided
+      const updateOrgSchema = insertOrganizationSchema.extend({
+        slug: z.string().min(1).regex(/^[a-z0-9-]+$/).optional(),
+      }).partial();
+
+      const validatedData = updateOrgSchema.parse(req.body);
+
+      // If updating slug, check for conflicts
+      if (validatedData.slug) {
+        const existingOrg = await storage.getOrganizationBySlug(validatedData.slug);
+        if (existingOrg && existingOrg.id !== req.params.id) {
+          return res.status(400).json({ message: "Organization with this slug already exists" });
+        }
+      }
+
+      const org = await storage.updateOrganization(req.params.id, validatedData);
+      if (!org) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+      res.json(org);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      console.error("Update organization error:", error);
+      res.status(500).json({ message: "Failed to update organization" });
+    }
+  });
+
+  // Delete organization
+  app.delete("/api/admin/organizations/:id", requireAuth, requireRole("super_admin"), async (req: AuthRequest, res) => {
+    try {
+      await storage.deleteOrganization(req.params.id);
+      res.json({ message: "Organization deleted successfully" });
+    } catch (error) {
+      console.error("Delete organization error:", error);
+      res.status(500).json({ message: "Failed to delete organization" });
+    }
+  });
+
+  // Public route to get organization by slug (for booking pages)
+  // Only returns safe public-facing fields
+  app.get("/api/organizations/:slug", async (req, res) => {
+    try {
+      const org = await storage.getOrganizationBySlug(req.params.slug);
+      if (!org) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+      
+      // Return only public-safe fields for booking pages
+      const publicOrg = {
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        phone: org.phone,
+        city: org.city,
+        state: org.state,
+        website: org.website,
+        logo: org.logo,
+        primaryColor: org.primaryColor,
+        secondaryColor: org.secondaryColor,
+      };
+      
+      res.json(publicOrg);
+    } catch (error) {
+      console.error("Get organization by slug error:", error);
+      res.status(500).json({ message: "Failed to get organization" });
     }
   });
 

@@ -68,6 +68,32 @@ export class DbStorage implements IStorage {
     const result = await db.select().from(organizations).where(eq(organizations.id, id)).limit(1);
     return result[0];
   }
+
+  async getOrganizationBySlug(slug: string): Promise<Organization | undefined> {
+    const result = await db.select().from(organizations).where(eq(organizations.slug, slug)).limit(1);
+    return result[0];
+  }
+
+  async getAllOrganizations(): Promise<Organization[]> {
+    return await db.select().from(organizations).orderBy(organizations.name);
+  }
+
+  async createOrganization(insertOrg: InsertOrganization): Promise<Organization> {
+    const result = await db.insert(organizations).values(insertOrg).returning();
+    return result[0];
+  }
+
+  async updateOrganization(id: string, updates: Partial<InsertOrganization>): Promise<Organization | undefined> {
+    const result = await db.update(organizations)
+      .set(updates)
+      .where(eq(organizations.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteOrganization(id: string): Promise<void> {
+    await db.delete(organizations).where(eq(organizations.id, id));
+  }
 }
 
 export const storage = new DbStorage();
