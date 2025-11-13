@@ -1,0 +1,576 @@
+Dumpster Rental & Junk Hauling Platform - MVP Definitions
+Product Overview
+A multi-tenant SaaS platform for dumpster rental businesses to manage bookings, inventory, and payments with a customer-facing booking interface.
+User Roles & Authentication
+Role Hierarchy
+
+Super Admin (Platform Level)
+
+Full system access
+Can create new organizations
+Can invite organization owners
+View all organizations and data
+
+
+Organization Owner (Primary User)
+
+First user created for an organization
+Full access to organization settings
+Can invite and manage organization users
+Access to billing and subscription
+Can delete organization
+Cannot be removed (unless transferred)
+
+
+Organization Admin (Secondary User)
+
+Can manage bookings and inventory
+Can view reports and calendar
+Can manage customers
+Cannot access organization settings or billing
+Cannot manage other users
+
+
+Customer
+
+Can create bookings
+Can view their booking history
+Can make payments
+No access to business dashboard
+
+
+
+User Management Requirements
+
+Email-based authentication
+Password reset functionality
+Email verification for new accounts
+Invitation system with expiring tokens (7 days)
+User can belong to only one organization
+Session management with secure tokens
+
+Database Schema
+Users Table
+id: UUID (primary key)
+email: string (unique)
+password_hash: string
+first_name: string
+last_name: string
+phone: string (optional)
+role: enum (super_admin, org_owner, org_admin, customer)
+organization_id: UUID (foreign key, nullable for super_admin)
+email_verified: boolean
+created_at: timestamp
+updated_at: timestamp
+last_login: timestamp
+Organizations Table
+id: UUID (primary key)
+name: string
+business_name: string
+email: string
+phone: string
+address: string
+city: string
+state: string
+zip: string
+service_area_radius: integer (miles)
+tax_rate: decimal
+stripe_account_id: string (optional)
+status: enum (active, suspended, trial)
+created_at: timestamp
+updated_at: timestamp
+Organization_Invitations Table
+id: UUID (primary key)
+organization_id: UUID (foreign key)
+email: string
+role: enum (org_owner, org_admin)
+invited_by: UUID (foreign key to users)
+token: string (unique)
+expires_at: timestamp
+accepted_at: timestamp (nullable)
+created_at: timestamp
+Dumpster_Types Table
+id: UUID (primary key)
+organization_id: UUID (foreign key)
+name: string (e.g., "10 Yard", "20 Yard")
+size_yards: integer
+capacity_description: string
+daily_rate: decimal
+weekly_rate: decimal
+weight_limit_tons: decimal
+overage_fee_per_ton: decimal
+image_url: string (optional)
+is_active: boolean
+created_at: timestamp
+Dumpster_Inventory Table
+id: UUID (primary key)
+organization_id: UUID (foreign key)
+dumpster_type_id: UUID (foreign key)
+unit_number: string (e.g., "10Y-001")
+status: enum (available, rented, maintenance, retired)
+current_location: string (optional)
+notes: text (optional)
+created_at: timestamp
+updated_at: timestamp
+Bookings Table
+id: UUID (primary key)
+organization_id: UUID (foreign key)
+customer_id: UUID (foreign key to users)
+dumpster_type_id: UUID (foreign key)
+dumpster_inventory_id: UUID (foreign key, nullable until assigned)
+booking_number: string (unique, auto-generated)
+status: enum (pending, confirmed, delivered, picked_up, completed, cancelled)
+
+# Customer Info
+customer_name: string
+customer_email: string
+customer_phone: string
+
+# Service Details
+delivery_address: string
+delivery_city: string
+delivery_state: string
+delivery_zip: string
+delivery_date: date
+delivery_time_slot: string (e.g., "8am-12pm")
+pickup_date: date (nullable, can be extended)
+pickup_time_slot: string (optional)
+rental_days: integer
+
+# Pricing
+base_rate: decimal
+daily_rate: decimal
+delivery_fee: decimal
+subtotal: decimal
+tax_amount: decimal
+total_amount: decimal
+deposit_amount: decimal (optional)
+amount_paid: decimal
+balance_due: decimal
+
+# Additional
+special_instructions: text (optional)
+internal_notes: text (optional)
+created_at: timestamp
+updated_at: timestamp
+Junk_Hauling_Quotes Table
+id: UUID (primary key)
+organization_id: UUID (foreign key)
+customer_id: UUID (foreign key, nullable)
+quote_number: string (unique)
+status: enum (pending, quoted, accepted, rejected, completed)
+
+# Customer Info
+customer_name: string
+customer_email: string
+customer_phone: string
+service_address: string
+service_city: string
+service_state: string
+service_zip: string
+
+# Quote Details
+item_description: text
+estimated_volume: string (e.g., "1/4 truck load")
+photo_urls: json (array of image URLs)
+quote_amount: decimal (nullable until quoted)
+notes: text (optional)
+preferred_date: date (optional)
+
+created_at: timestamp
+updated_at: timestamp
+expires_at: timestamp
+Payments Table
+id: UUID (primary key)
+organization_id: UUID (foreign key)
+booking_id: UUID (foreign key, nullable)
+quote_id: UUID (foreign key, nullable)
+customer_id: UUID (foreign key)
+amount: decimal
+payment_method: enum (credit_card, debit_card, ach)
+payment_status: enum (pending, completed, failed, refunded)
+stripe_payment_intent_id: string
+stripe_charge_id: string (nullable)
+transaction_date: timestamp
+notes: text (optional)
+created_at: timestamp
+Service_Areas Table
+id: UUID (primary key)
+organization_id: UUID (foreign key)
+zip_code: string
+delivery_fee: decimal
+is_active: boolean
+created_at: timestamp
+Blackout_Dates Table
+id: UUID (primary key)
+organization_id: UUID (foreign key)
+date: date
+reason: string
+created_at: timestamp
+Settings Table (Organization-level settings)
+id: UUID (primary key)
+organization_id: UUID (foreign key, unique)
+minimum_rental_days: integer (default: 7)
+turnaround_hours: integer (default: 24)
+lead_time_hours: integer (default: 48)
+require_customer_account: boolean (default: false)
+allow_same_day_pickup: boolean (default: false)
+booking_confirmation_email: boolean (default: true)
+reminder_email_hours_before: integer (default: 24)
+cancellation_hours_notice: integer (default: 48)
+cancellation_fee_percent: decimal (default: 0)
+created_at: timestamp
+updated_at: timestamp
+API Endpoints Structure
+Super Admin Routes
+POST   /api/super-admin/login
+POST   /api/super-admin/organizations (create new org)
+GET    /api/super-admin/organizations (list all orgs)
+GET    /api/super-admin/organizations/:id
+PUT    /api/super-admin/organizations/:id
+DELETE /api/super-admin/organizations/:id
+POST   /api/super-admin/organizations/:id/invite-owner
+GET    /api/super-admin/users (all platform users)
+Authentication Routes
+POST   /api/auth/register (customer registration)
+POST   /api/auth/login
+POST   /api/auth/logout
+POST   /api/auth/forgot-password
+POST   /api/auth/reset-password
+POST   /api/auth/verify-email
+GET    /api/auth/me (current user info)
+Organization User Management
+GET    /api/organizations/:orgId/users
+POST   /api/organizations/:orgId/invite
+DELETE /api/organizations/:orgId/users/:userId
+PUT    /api/organizations/:orgId/users/:userId/role
+GET    /api/invitations/:token (view invitation)
+POST   /api/invitations/:token/accept
+Organization Settings (Owner only)
+GET    /api/organizations/:orgId
+PUT    /api/organizations/:orgId
+GET    /api/organizations/:orgId/settings
+PUT    /api/organizations/:orgId/settings
+Dumpster Types & Inventory (Admin/Owner)
+GET    /api/organizations/:orgId/dumpster-types
+POST   /api/organizations/:orgId/dumpster-types
+PUT    /api/organizations/:orgId/dumpster-types/:id
+DELETE /api/organizations/:orgId/dumpster-types/:id
+
+GET    /api/organizations/:orgId/inventory
+POST   /api/organizations/:orgId/inventory
+PUT    /api/organizations/:orgId/inventory/:id
+DELETE /api/organizations/:orgId/inventory/:id
+Availability Check (Public/Customer)
+GET    /api/organizations/:orgId/availability
+     Query params: dumpster_type_id, delivery_date, rental_days
+     Returns: { available: boolean, inventory_count: number }
+Bookings
+# Customer Routes
+POST   /api/organizations/:orgId/bookings (create booking)
+GET    /api/customers/bookings (customer's bookings)
+GET    /api/customers/bookings/:id
+PUT    /api/customers/bookings/:id/cancel
+
+# Business Dashboard Routes
+GET    /api/organizations/:orgId/bookings
+GET    /api/organizations/:orgId/bookings/:id
+PUT    /api/organizations/:orgId/bookings/:id
+PUT    /api/organizations/:orgId/bookings/:id/status
+DELETE /api/organizations/:orgId/bookings/:id
+Junk Hauling Quotes
+# Customer Routes
+POST   /api/organizations/:orgId/quotes (request quote)
+GET    /api/customers/quotes
+GET    /api/customers/quotes/:id
+
+# Business Dashboard Routes
+GET    /api/organizations/:orgId/quotes
+PUT    /api/organizations/:orgId/quotes/:id (update with quote amount)
+PUT    /api/organizations/:orgId/quotes/:id/status
+Payments
+POST   /api/payments/create-intent (Stripe payment intent)
+POST   /api/payments/confirm
+GET    /api/organizations/:orgId/payments
+GET    /api/customers/payments
+Service Areas
+GET    /api/organizations/:orgId/service-areas
+POST   /api/organizations/:orgId/service-areas
+PUT    /api/organizations/:orgId/service-areas/:id
+DELETE /api/organizations/:orgId/service-areas/:id
+POST   /api/organizations/:orgId/service-areas/check
+     Body: { zip_code: string }
+     Returns: { serviceable: boolean, delivery_fee: decimal }
+Calendar & Scheduling
+GET    /api/organizations/:orgId/calendar
+     Query params: start_date, end_date, dumpster_type_id (optional)
+     Returns: Array of bookings with delivery/pickup dates
+
+GET    /api/organizations/:orgId/blackout-dates
+POST   /api/organizations/:orgId/blackout-dates
+DELETE /api/organizations/:orgId/blackout-dates/:id
+Core Business Logic
+Inventory Availability Algorithm
+For a given dumpster type, date range, and organization:
+
+1. Get total inventory count for that dumpster type
+2. Get all bookings that overlap with requested date range:
+   - Booking delivery_date <= requested_end_date
+   - Booking pickup_date >= requested_start_date
+   - Add turnaround_hours buffer after each pickup
+3. Get all dumpsters in maintenance during date range
+4. Calculate: available = total - (active_bookings + maintenance)
+5. Return available count
+
+Prevent overbooking:
+- Lock inventory during checkout process
+- Re-check availability before payment confirmation
+- Use database transactions for booking creation
+Pricing Calculation
+Base calculation:
+1. Get base rate from dumpster type
+2. Calculate rental days (pickup_date - delivery_date)
+3. If rental_days <= 7: use weekly_rate
+4. If rental_days > 7: weekly_rate + (additional_days * daily_rate)
+5. Add delivery fee based on service area
+6. Calculate tax: subtotal * tax_rate
+7. Total = subtotal + tax + delivery_fee
+Frontend Pages Structure
+Public Pages
+
+Home/Landing Page (/)
+
+Hero with booking CTA
+Dumpster types overview
+Service area info
+How it works section
+
+
+Booking Flow (/book)
+
+Step 1: Select dumpster size
+Step 2: Enter service address & dates
+Step 3: Contact info
+Step 4: Review & payment
+Confirmation page
+
+
+Quote Request (/quote)
+
+Form with item description
+Photo upload (multiple)
+Contact information
+Preferred date selection
+
+
+Customer Portal (/customer/dashboard)
+
+Login required
+Active bookings
+Booking history
+Payment history
+Request pickup/extension
+
+
+
+Super Admin Pages
+
+Super Admin Login (/super-admin/login)
+Organizations List (/super-admin/organizations)
+
+Create new organization
+Search/filter organizations
+View organization details
+
+
+Create Organization (/super-admin/organizations/new)
+
+Organization details form
+Invite owner email
+
+
+Platform Users (/super-admin/users)
+
+Business Dashboard Pages (Org Owner/Admin)
+
+Dashboard Login (/dashboard/login)
+Dashboard Home (/dashboard)
+
+Today's deliveries/pickups
+Recent bookings
+Revenue summary
+Available inventory count
+
+
+Calendar (/dashboard/calendar)
+
+Month/week/day views
+Color-coded by status
+Filter by dumpster type
+Quick view booking details
+
+
+Bookings (/dashboard/bookings)
+
+List view with filters
+Status updates
+Assign inventory
+Add internal notes
+View customer info
+
+
+Quotes (/dashboard/quotes)
+
+Pending quotes list
+Review photos
+Enter quote amount
+Send quote to customer
+
+
+Inventory (/dashboard/inventory)
+
+Dumpster types management
+Individual unit tracking
+Status updates (maintenance, etc.)
+Utilization metrics
+
+
+Settings (/dashboard/settings)
+
+Organization profile
+Service areas management
+Pricing configuration
+Business rules (lead time, rental periods, etc.)
+Blackout dates
+Email notifications
+
+
+Team (/dashboard/team) (Owner only)
+
+List users
+Invite new users
+Manage roles
+Remove users
+
+
+Payments (/dashboard/payments)
+
+Transaction history
+Filter by date/status
+Export functionality
+
+
+
+MVP Feature Prioritization
+Phase 1 (Core MVP)
+✅ Super admin can create organizations and invite owners
+✅ Organization owner can set up dumpster types and inventory
+✅ Customers can check availability
+✅ Customers can create bookings
+✅ Payment processing via Stripe
+✅ Basic business dashboard with calendar
+✅ Email notifications for bookings
+Phase 2 (Post-MVP)
+
+Junk hauling quotes with photo upload
+Customer accounts and history
+Service area management with zip codes
+Blackout dates
+Inventory assignment to specific units
+Advanced calendar features (drag-drop rescheduling)
+
+Phase 3 (Future)
+
+SMS notifications
+Driver mobile app
+Route optimization
+Reporting and analytics
+Promotional codes
+Multi-location support
+
+Technology Stack Recommendations
+Backend
+
+Framework: Node.js with Express or Nest.js
+Database: PostgreSQL
+ORM: Prisma or TypeORM
+Authentication: JWT tokens, bcrypt for passwords
+Payment: Stripe API
+File Upload: AWS S3 or Cloudinary (for quote photos)
+Email: SendGrid or AWS SES
+
+Frontend
+
+Framework: React with Next.js (for SEO on public pages)
+State Management: React Context or Zustand
+UI Library: Tailwind CSS + shadcn/ui or Material-UI
+Calendar: FullCalendar or React Big Calendar
+Forms: React Hook Form + Zod validation
+Date Handling: date-fns or Day.js
+
+Infrastructure
+
+Hosting: Replit, Vercel, or Railway
+Database: Supabase, Neon, or Railway Postgres
+File Storage: Cloudflare R2, AWS S3, or Cloudinary
+
+Environment Variables
+# Database
+DATABASE_URL=
+
+# Authentication
+JWT_SECRET=
+JWT_EXPIRES_IN=7d
+
+# Stripe
+STRIPE_SECRET_KEY=
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+# Email
+SENDGRID_API_KEY=
+FROM_EMAIL=
+
+# App
+APP_URL=
+SUPER_ADMIN_EMAIL=
+SUPER_ADMIN_PASSWORD=
+
+# File Upload
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_BUCKET_NAME=
+AWS_REGION=
+Initial Setup Flow
+
+First Time Setup
+
+Seed super admin account on first deployment
+Super admin logs in with default credentials
+Super admin forced to change password
+
+
+Creating First Organization
+
+Super admin creates organization
+Enters organization details
+Invites owner via email
+Owner receives invitation email with token
+Owner clicks link, sets password, gains access
+
+
+Organization Setup
+
+Owner completes organization profile
+Adds dumpster types with pricing
+Adds inventory units
+Configures service areas
+Sets business rules
+Connects Stripe account
+
+
+Ready for Bookings
+
+Public booking page is live
+Customers can check availability and book
+Owner receives notifications
