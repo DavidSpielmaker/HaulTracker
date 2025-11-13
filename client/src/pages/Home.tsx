@@ -97,12 +97,10 @@ export default function Home() {
           <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto" data-testid="text-cta-subtitle">
             Book your dumpster today and we'll have it delivered when you need it
           </p>
-          <Link href="/book">
-            <a data-testid="button-cta-book">
-              <button className="bg-background text-foreground hover-elevate active-elevate-2 px-8 py-3 rounded-md text-lg font-medium">
-                Book Now
-              </button>
-            </a>
+          <Link href="/book" data-testid="button-cta-book">
+            <button className="bg-background text-foreground hover-elevate active-elevate-2 px-8 py-3 rounded-md text-lg font-medium">
+              Book Now
+            </button>
           </Link>
         </div>
       </section>

@@ -27,20 +27,16 @@ export default function Hero() {
             </a>
           </div>
           <div className="flex flex-wrap gap-4">
-            <Link href="/book">
-              <a data-testid="button-hero-book">
-                <Button size="lg" className="text-lg px-8">
-                  Get Started
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </a>
+            <Link href="/book" data-testid="button-hero-book">
+              <Button size="lg" className="text-lg px-8">
+                Get Started
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
             </Link>
-            <Link href="/quote">
-              <a data-testid="button-hero-quote">
-                <Button size="lg" variant="outline" className="text-lg px-8 bg-background/10 backdrop-blur-sm border-white/20 text-white hover:bg-background/20">
-                  Request Quote
-                </Button>
-              </a>
+            <Link href="/quote" data-testid="button-hero-quote">
+              <Button size="lg" variant="outline" className="text-lg px-8 bg-background/10 backdrop-blur-sm border-white/20 text-white hover:bg-background/20">
+                Request Quote
+              </Button>
             </Link>
           </div>
         </div>

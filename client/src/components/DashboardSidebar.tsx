@@ -85,11 +85,9 @@ export default function DashboardSidebar() {
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <Link href={item.url}>
-                        <a className="flex items-center gap-3 w-full" data-testid={`link-${item.title.toLowerCase()}`}>
-                          <Icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </a>
+                      <Link href={item.url} className="flex items-center gap-3" data-testid={`link-${item.title.toLowerCase()}`}>
+                        <Icon className="h-4 w-4" />
+                        <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
