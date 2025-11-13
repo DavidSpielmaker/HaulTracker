@@ -2,6 +2,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import KPICard from "@/components/KPICard";
 import BookingTable from "@/components/BookingTable";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { Truck, Calendar, Package, DollarSign } from "lucide-react";
 
 // TODO: remove mock functionality
@@ -45,7 +46,8 @@ export default function DashboardHome() {
   };
 
   return (
-    <SidebarProvider style={style as React.CSSProperties}>
+    <ProtectedRoute requiredRoles={["super_admin", "org_owner", "org_admin"]}>
+      <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
         <DashboardSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
@@ -97,5 +99,6 @@ export default function DashboardHome() {
         </div>
       </div>
     </SidebarProvider>
+    </ProtectedRoute>
   );
 }

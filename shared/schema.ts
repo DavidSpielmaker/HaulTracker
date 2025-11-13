@@ -34,7 +34,7 @@ export const organizations = pgTable("organizations", {
 // Users Table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: text("email").notNull().unique(),
+  email: text("email").notNull(),
   passwordHash: text("password_hash").notNull(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
@@ -45,7 +45,10 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   lastLogin: timestamp("last_login"),
-});
+}, (table) => ({
+  // Composite unique constraint for organization-scoped email uniqueness
+  emailOrgUnique: unique("users_email_org_unique").on(table.email, table.organizationId),
+}));
 
 // Organization Invitations Table
 export const organizationInvitations = pgTable("organization_invitations", {

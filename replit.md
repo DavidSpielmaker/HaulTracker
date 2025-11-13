@@ -20,13 +20,41 @@ This platform allows dumpster rental companies to:
 - **Seed Data**: 4 dumpster sizes, 41 inventory units, 32 service area ZIP codes
 
 ### 🚧 In Progress
-- Authentication system with role-based access control
 - Organization management (super admin features)
 - Multi-tenant routing for branded booking pages
 - Booking flow with availability checking
 - Stripe payment integration
 - Business dashboard backend
 - Email notifications
+
+### ✅ Authentication System (Core Complete - Org-Scoped Login in Task 3)
+
+**Implemented & Secure:**
+- ✅ Session-based auth with PostgreSQL storage
+- ✅ Password hashing with bcrypt (10 salt rounds)
+- ✅ CSRF protection (SameSite=strict cookies)
+- ✅ Session regeneration on login/register (prevents fixation attacks)
+- ✅ HTTP-only secure cookies
+- ✅ Multi-tenant database schema: Composite unique (email, organization_id)
+- ✅ Organization-scoped customer registration with email normalization
+- ✅ Role-based access control middleware (requireAuth, requireRole, requireOrgAccess)
+- ✅ Protected route examples (/api/organization/current, /api/admin/stats)
+- ✅ Frontend protected routes with proper redirect handling (useEffect)
+- ✅ Email normalization in all user creation paths
+
+**Current Capability:**
+- ✅ Super admin login works (no organization context needed)
+- ✅ Customer registration works (organization-specific)
+- ✅ Protected API routes functional
+- ✅ Multi-tenant data isolation at database level
+
+**Requires Task 3 (Multi-Tenant Routing):**
+- ⏳ Organization-scoped login for org_owner/org_admin (needs org context from routing)
+- ⏳ Organization-specific login pages/URLs
+- ⏳ Invite-based flows for business users
+- ⏳ Subdomain or path-based organization routing
+
+**Implementation Note:** The backend requires organizationId for non-super-admin login to ensure tenant isolation. The frontend login UI will be updated when multi-tenant routing is implemented, allowing users to select/detect their organization before logging in.
 
 ## Technical Stack
 
