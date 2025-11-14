@@ -17,8 +17,18 @@ async function seed() {
   const passwordHash = await bcrypt.hash("admin123", 10);
   console.log("✅ Generated password hash");
 
-  // Create first organization - 1 Call Junk Removal
-  const [org] = await db.insert(organizations).values({
+  // Check if 1 Call organization already exists
+  const existing1Call = await db.select().from(organizations)
+    .where(eq(organizations.slug, "1-call-junk-removal"))
+    .limit(1);
+
+  let org;
+  if (existing1Call.length > 0) {
+    console.log("⚠️  1 Call Junk Removal organization already exists, skipping...");
+    org = existing1Call[0];
+  } else {
+    // Create first organization - 1 Call Junk Removal
+    const [newOrg] = await db.insert(organizations).values({
     name: "1 Call Junk Removal",
     slug: "1-call-junk-removal",
     businessName: "1 Call Junk Removal LLC",
@@ -36,11 +46,18 @@ async function seed() {
     primaryColor: "211 85% 42%",
     secondaryColor: "211 85% 42%",
   }).returning();
+    org = newOrg;
 
   console.log("✅ Created organization:", org.name);
+  }
 
-  // Create organization settings
-  await db.insert(organizationSettings).values({
+  // Create organization settings (only if they don't exist)
+  const existingSettings = await db.select().from(organizationSettings)
+    .where(eq(organizationSettings.organizationId, org.id))
+    .limit(1);
+
+  if (existingSettings.length === 0) {
+    await db.insert(organizationSettings).values({
     organizationId: org.id,
     minimumRentalDays: 7,
     turnaroundHours: 24,
@@ -54,9 +71,17 @@ async function seed() {
   });
 
   console.log("✅ Created organization settings");
+  } else {
+    console.log("⚠️  Organization settings already exist, skipping...");
+  }
 
-  // Create super admin user
-  const [superAdmin] = await db.insert(users).values({
+  // Create super admin user (only if doesn't exist)
+  const existingSuperAdmin = await db.select().from(users)
+    .where(eq(users.email, "admin@dumpsterpro.com"))
+    .limit(1);
+
+  if (existingSuperAdmin.length === 0) {
+    const [superAdmin] = await db.insert(users).values({
     email: "admin@dumpsterpro.com",
     passwordHash: passwordHash,
     firstName: "Super",
@@ -67,9 +92,17 @@ async function seed() {
   }).returning();
 
   console.log("✅ Created super admin user");
+  } else {
+    console.log("⚠️  Super admin user already exists, skipping...");
+  }
 
-  // Create organization owner
-  const [owner] = await db.insert(users).values({
+  // Create organization owner (only if doesn't exist)
+  const existingOwner = await db.select().from(users)
+    .where(eq(users.email, "owner@1calljunkremoval.com"))
+    .limit(1);
+
+  if (existingOwner.length === 0) {
+    const [owner] = await db.insert(users).values({
     email: "owner@1calljunkremoval.com",
     passwordHash: passwordHash,
     firstName: "John",
@@ -81,7 +114,15 @@ async function seed() {
   }).returning();
 
   console.log("✅ Created organization owner");
+  } else {
+    console.log("⚠️  Organization owner already exists, skipping...");
+  }
 
+  // Create dumpster types (only if they don't exist for this org)
+  const existingTypes = await db.select().from(dumpsterTypes)
+    .where(eq(dumpsterTypes.organizationId, org.id));
+
+  if (existingTypes.length === 0) {
   // Create dumpster types
   const dumpsterTypesData = [
     {
@@ -134,29 +175,37 @@ async function seed() {
     },
   ];
 
-  const createdTypes = await db.insert(dumpsterTypes).values(dumpsterTypesData).returning();
-  console.log("✅ Created", createdTypes.length, "dumpster types");
+    const createdTypes = await db.insert(dumpsterTypes).values(dumpsterTypesData).returning();
+    console.log("✅ Created", createdTypes.length, "dumpster types");
 
-  // Create inventory for each dumpster type
-  let totalInventory = 0;
-  for (const type of createdTypes) {
-    const inventoryCount = type.sizeYards === 20 ? 15 : type.sizeYards === 10 ? 10 : 8; // More 20-yard units
-    const inventoryItems = [];
-    
-    for (let i = 1; i <= inventoryCount; i++) {
-      inventoryItems.push({
-        organizationId: org.id,
-        dumpsterTypeId: type.id,
-        unitNumber: `${type.sizeYards}Y-${String(i).padStart(3, '0')}`,
-        status: "available" as const,
-      });
+    // Create inventory for each dumpster type
+    let totalInventory = 0;
+    for (const type of createdTypes) {
+      const inventoryCount = type.sizeYards === 20 ? 15 : type.sizeYards === 10 ? 10 : 8; // More 20-yard units
+      const inventoryItems = [];
+
+      for (let i = 1; i <= inventoryCount; i++) {
+        inventoryItems.push({
+          organizationId: org.id,
+          dumpsterTypeId: type.id,
+          unitNumber: `${type.sizeYards}Y-${String(i).padStart(3, '0')}`,
+          status: "available" as const,
+        });
+      }
+
+      await db.insert(dumpsterInventory).values(inventoryItems);
+      totalInventory += inventoryCount;
     }
-    
-    await db.insert(dumpsterInventory).values(inventoryItems);
-    totalInventory += inventoryCount;
+    console.log("✅ Created", totalInventory, "inventory units");
+  } else {
+    console.log("⚠️  Dumpster types and inventory already exist, skipping...");
   }
-  console.log("✅ Created", totalInventory, "inventory units");
 
+  // Create service areas (Kansas City area ZIP codes) only if they don't exist
+  const existingAreas = await db.select().from(serviceAreas)
+    .where(eq(serviceAreas.organizationId, org.id));
+
+  if (existingAreas.length === 0) {
   // Create service areas (Kansas City area ZIP codes)
   const serviceAreasData = [
     { organizationId: org.id, zipCode: "64101", deliveryFee: "75.00", isActive: true },
@@ -193,11 +242,23 @@ async function seed() {
     { organizationId: org.id, zipCode: "64138", deliveryFee: "95.00", isActive: true },
   ];
 
-  await db.insert(serviceAreas).values(serviceAreasData);
-  console.log("✅ Created", serviceAreasData.length, "service areas");
+    await db.insert(serviceAreas).values(serviceAreasData);
+    console.log("✅ Created", serviceAreasData.length, "service areas");
+  } else {
+    console.log("⚠️  Service areas already exist, skipping...");
+  }
 
-  // Create test organization
-  const [testOrg] = await db.insert(organizations).values({
+  // Create test organization (only if doesn't exist)
+  const existingTestOrg = await db.select().from(organizations)
+    .where(eq(organizations.slug, "test-dumpster-co"))
+    .limit(1);
+
+  let testOrg;
+  if (existingTestOrg.length > 0) {
+    console.log("⚠️  Test organization already exists, skipping...");
+    testOrg = existingTestOrg[0];
+  } else {
+    const [newTestOrg] = await db.insert(organizations).values({
     name: "Test Dumpster Co",
     slug: "test-dumpster-co",
     businessName: "Test Dumpster Company LLC",
@@ -215,6 +276,7 @@ async function seed() {
     primaryColor: "0 0% 9%",
     secondaryColor: "0 0% 9%",
   }).returning();
+    testOrg = newTestOrg;
 
   console.log("✅ Created test organization:", testOrg.name);
 
@@ -310,6 +372,7 @@ async function seed() {
 
   await db.insert(serviceAreas).values(testServiceAreas);
   console.log("✅ Created", testServiceAreas.length, "test service areas");
+  }
 
   console.log("\n✨ Seed complete!");
   console.log("\nLogin credentials:");
