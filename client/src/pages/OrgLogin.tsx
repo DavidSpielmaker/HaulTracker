@@ -53,7 +53,7 @@ export default function OrgLogin() {
   });
 
   const loginMutation = useMutation({
-    mutationFn: async (data: LoginFormData & { organizationId: string }) =>
+    mutationFn: async (data: LoginFormData) =>
       apiRequest("POST", "/api/auth/login", data),
     onSuccess: () => {
       toast({
@@ -74,10 +74,7 @@ export default function OrgLogin() {
 
   const onSubmit = (data: LoginFormData) => {
     if (!organization) return;
-    loginMutation.mutate({
-      ...data,
-      organizationId: String(organization.id),
-    });
+    loginMutation.mutate(data);
   };
 
   if (orgLoading) {

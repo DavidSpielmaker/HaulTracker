@@ -112,24 +112,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const loginSchema = z.object({
         email: z.string().email(),
         password: z.string().min(1),
-        organizationId: z.string().optional(), // Required for non-super-admin login
       });
 
-      const { email, password, organizationId } = loginSchema.parse(req.body);
+      const { email, password } = loginSchema.parse(req.body);
+      const normalizedEmail = email.toLowerCase();
 
-      // Get user by email and organization (or just email for super_admin)
-      let user;
-      if (organizationId) {
-        // Organization-scoped login for org users and customers
-        user = await storage.getUserByEmailAndOrg(email.toLowerCase(), organizationId);
-      } else {
-        // Global login for super_admin (no organization)
-        user = await storage.getUserByEmail(email.toLowerCase());
-        // Ensure only super_admin can login without organization context
-        if (user && user.role !== "super_admin") {
-          return res.status(401).json({ message: "Organization required for login" });
-        }
-      }
+      // Find user by email (automatically handles multi-tenant lookup)
+      const user = await storage.getUserByEmail(normalizedEmail);
 
       if (!user) {
         return res.status(401).json({ message: "Invalid email or password" });
