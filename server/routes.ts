@@ -118,16 +118,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, password } = loginSchema.parse(req.body);
       const normalizedEmail = email.toLowerCase();
 
+      console.log(`[LOGIN] Attempting login for email: ${normalizedEmail}`);
+
       // Find user by email (automatically handles multi-tenant lookup)
       const user = await storage.getUserByEmail(normalizedEmail);
 
       if (!user) {
+        console.log(`[LOGIN] User not found: ${normalizedEmail}`);
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
+      console.log(`[LOGIN] User found: ${user.email}, role: ${user.role}`);
+
       // Verify password
       const isValid = await storage.verifyPassword(password, user.passwordHash);
+      console.log(`[LOGIN] Password verification result: ${isValid}`);
+
       if (!isValid) {
+        console.log(`[LOGIN] Invalid password for: ${normalizedEmail}`);
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
