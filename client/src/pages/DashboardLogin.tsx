@@ -17,8 +17,12 @@ export default function DashboardLogin() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Redirect to dashboard if already logged in
-  if (user && user.role !== "customer") {
-    setLocation("/dashboard");
+  if (user) {
+    if (user.role === "super_admin") {
+      setLocation("/admin");
+    } else {
+      setLocation("/dashboard");
+    }
     return null;
   }
 
@@ -28,8 +32,13 @@ export default function DashboardLogin() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
-      setLocation("/dashboard");
+      const userData = await login(email, password);
+      // Redirect based on role
+      if (user?.role === "super_admin") {
+        setLocation("/admin");
+      } else {
+        setLocation("/dashboard");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed. Please check your credentials.");
     } finally {
@@ -44,9 +53,9 @@ export default function DashboardLogin() {
           <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <Truck className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl" data-testid="text-login-title">Dashboard Login</CardTitle>
+          <CardTitle className="text-2xl" data-testid="text-login-title">Sign in to HaulTracker</CardTitle>
           <CardDescription data-testid="text-login-description">
-            Access your business dashboard
+            Access your dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>

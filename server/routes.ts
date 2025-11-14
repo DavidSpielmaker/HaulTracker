@@ -315,35 +315,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public route to get organization by slug (for booking pages)
-  // Only returns safe public-facing fields
-  app.get("/api/organizations/:slug", async (req, res) => {
-    try {
-      const org = await storage.getOrganizationBySlug(req.params.slug);
-      if (!org) {
-        return res.status(404).json({ message: "Organization not found" });
-      }
-      
-      // Return only public-safe fields for booking pages
-      const publicOrg = {
-        id: org.id,
-        name: org.name,
-        slug: org.slug,
-        phone: org.phone,
-        city: org.city,
-        state: org.state,
-        website: org.website,
-        logo: org.logo,
-        primaryColor: org.primaryColor,
-        secondaryColor: org.secondaryColor,
-      };
-      
-      res.json(publicOrg);
-    } catch (error) {
-      console.error("Get organization by slug error:", error);
-      res.status(500).json({ message: "Failed to get organization" });
-    }
-  });
 
   // Dashboard stats endpoint
   app.get("/api/dashboard/stats", requireAuth, async (req: AuthRequest, res) => {
