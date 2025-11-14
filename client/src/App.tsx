@@ -23,6 +23,7 @@ function Router() {
       {/* Public routes */}
       <Route path="/" component={LandingPage} />
       <Route path="/login" component={DashboardLogin} />
+      <Route path="/dashboard/login" component={DashboardLogin} />
       <Route path="/api-docs" component={ApiDocs} />
 
       {/* Dashboard routes */}
