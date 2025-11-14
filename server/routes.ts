@@ -345,6 +345,229 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dashboard stats endpoint
+  app.get("/api/dashboard/stats", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ message: "User has no organization" });
+      }
+
+      const stats = await storage.getDashboardStats(req.user.organizationId, new Date());
+      res.json(stats);
+    } catch (error) {
+      console.error("Get dashboard stats error:", error);
+      res.status(500).json({ message: "Failed to get dashboard stats" });
+    }
+  });
+
+  // Bookings endpoints
+  app.get("/api/bookings", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ message: "User has no organization" });
+      }
+
+      const bookings = await storage.getBookingsByOrganization(req.user.organizationId);
+      res.json(bookings);
+    } catch (error) {
+      console.error("Get bookings error:", error);
+      res.status(500).json({ message: "Failed to get bookings" });
+    }
+  });
+
+  app.get("/api/bookings/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const booking = await storage.getBooking(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+
+      // Verify user has access to this booking's organization
+      if (req.user?.role !== "super_admin" && booking.organizationId !== req.user?.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      res.json(booking);
+    } catch (error) {
+      console.error("Get booking error:", error);
+      res.status(500).json({ message: "Failed to get booking" });
+    }
+  });
+
+  app.post("/api/bookings", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ message: "User has no organization" });
+      }
+
+      // Ensure organizationId matches the user's organization
+      const bookingData = {
+        ...req.body,
+        organizationId: req.user.organizationId,
+      };
+
+      const booking = await storage.createBooking(bookingData);
+      res.status(201).json(booking);
+    } catch (error) {
+      console.error("Create booking error:", error);
+      res.status(500).json({ message: "Failed to create booking" });
+    }
+  });
+
+  app.patch("/api/bookings/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const existingBooking = await storage.getBooking(req.params.id);
+      if (!existingBooking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+
+      // Verify user has access to this booking's organization
+      if (req.user?.role !== "super_admin" && existingBooking.organizationId !== req.user?.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const booking = await storage.updateBooking(req.params.id, req.body);
+      res.json(booking);
+    } catch (error) {
+      console.error("Update booking error:", error);
+      res.status(500).json({ message: "Failed to update booking" });
+    }
+  });
+
+  app.delete("/api/bookings/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const existingBooking = await storage.getBooking(req.params.id);
+      if (!existingBooking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+
+      // Verify user has access to this booking's organization
+      if (req.user?.role !== "super_admin" && existingBooking.organizationId !== req.user?.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      await storage.deleteBooking(req.params.id);
+      res.json({ message: "Booking deleted successfully" });
+    } catch (error) {
+      console.error("Delete booking error:", error);
+      res.status(500).json({ message: "Failed to delete booking" });
+    }
+  });
+
+  // Dumpster Types endpoints
+  app.get("/api/dumpster-types", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ message: "User has no organization" });
+      }
+
+      const types = await storage.getDumpsterTypesByOrganization(req.user.organizationId);
+      res.json(types);
+    } catch (error) {
+      console.error("Get dumpster types error:", error);
+      res.status(500).json({ message: "Failed to get dumpster types" });
+    }
+  });
+
+  app.post("/api/dumpster-types", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ message: "User has no organization" });
+      }
+
+      const typeData = {
+        ...req.body,
+        organizationId: req.user.organizationId,
+      };
+
+      const type = await storage.createDumpsterType(typeData);
+      res.status(201).json(type);
+    } catch (error) {
+      console.error("Create dumpster type error:", error);
+      res.status(500).json({ message: "Failed to create dumpster type" });
+    }
+  });
+
+  app.patch("/api/dumpster-types/:id", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      const type = await storage.updateDumpsterType(req.params.id, req.body);
+      if (!type) {
+        return res.status(404).json({ message: "Dumpster type not found" });
+      }
+      res.json(type);
+    } catch (error) {
+      console.error("Update dumpster type error:", error);
+      res.status(500).json({ message: "Failed to update dumpster type" });
+    }
+  });
+
+  app.delete("/api/dumpster-types/:id", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      await storage.deleteDumpsterType(req.params.id);
+      res.json({ message: "Dumpster type deleted successfully" });
+    } catch (error) {
+      console.error("Delete dumpster type error:", error);
+      res.status(500).json({ message: "Failed to delete dumpster type" });
+    }
+  });
+
+  // Inventory endpoints
+  app.get("/api/inventory", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ message: "User has no organization" });
+      }
+
+      const inventory = await storage.getDumpsterInventoryByOrganization(req.user.organizationId);
+      res.json(inventory);
+    } catch (error) {
+      console.error("Get inventory error:", error);
+      res.status(500).json({ message: "Failed to get inventory" });
+    }
+  });
+
+  app.post("/api/inventory", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ message: "User has no organization" });
+      }
+
+      const inventoryData = {
+        ...req.body,
+        organizationId: req.user.organizationId,
+      };
+
+      const item = await storage.createDumpsterInventoryItem(inventoryData);
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Create inventory item error:", error);
+      res.status(500).json({ message: "Failed to create inventory item" });
+    }
+  });
+
+  app.patch("/api/inventory/:id", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      const item = await storage.updateDumpsterInventoryItem(req.params.id, req.body);
+      if (!item) {
+        return res.status(404).json({ message: "Inventory item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Update inventory item error:", error);
+      res.status(500).json({ message: "Failed to update inventory item" });
+    }
+  });
+
+  app.delete("/api/inventory/:id", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      await storage.deleteDumpsterInventoryItem(req.params.id);
+      res.json({ message: "Inventory item deleted successfully" });
+    } catch (error) {
+      console.error("Delete inventory item error:", error);
+      res.status(500).json({ message: "Failed to delete inventory item" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
