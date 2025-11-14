@@ -5,6 +5,8 @@ import {
   bookings,
   dumpsterTypes,
   dumpsterInventory,
+  organizationSettings,
+  serviceAreas,
   type User,
   type InsertUser,
   type Organization,
@@ -14,7 +16,11 @@ import {
   type DumpsterType,
   type InsertDumpsterType,
   type DumpsterInventory,
-  type InsertDumpsterInventory
+  type InsertDumpsterInventory,
+  type OrganizationSettings,
+  type InsertOrganizationSettings,
+  type ServiceArea,
+  type InsertServiceArea
 } from "@shared/schema";
 import { eq, and, gte, lte, count, sum, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -66,6 +72,19 @@ export interface IStorage {
     availableUnits: number;
     monthlyRevenue: number;
   }>;
+
+  // Organization Settings operations
+  getOrganizationSettings(organizationId: string): Promise<OrganizationSettings | undefined>;
+  createOrganizationSettings(settings: InsertOrganizationSettings): Promise<OrganizationSettings>;
+  updateOrganizationSettings(organizationId: string, updates: Partial<InsertOrganizationSettings>): Promise<OrganizationSettings | undefined>;
+
+  // Service Area operations
+  getServiceAreasByOrganization(organizationId: string): Promise<ServiceArea[]>;
+  createServiceArea(area: InsertServiceArea): Promise<ServiceArea>;
+  deleteServiceArea(id: string): Promise<void>;
+
+  // Team/User operations
+  getUsersByOrganization(organizationId: string): Promise<User[]>;
 }
 
 export class DbStorage implements IStorage {
@@ -297,6 +316,50 @@ export class DbStorage implements IStorage {
       availableUnits: availableResult[0]?.count || 0,
       monthlyRevenue: Number(revenueResult[0]?.total || 0),
     };
+  }
+
+  // Organization Settings operations
+  async getOrganizationSettings(organizationId: string): Promise<OrganizationSettings | undefined> {
+    const result = await db.select().from(organizationSettings)
+      .where(eq(organizationSettings.organizationId, organizationId))
+      .limit(1);
+    return result[0];
+  }
+
+  async createOrganizationSettings(insertSettings: InsertOrganizationSettings): Promise<OrganizationSettings> {
+    const result = await db.insert(organizationSettings).values(insertSettings).returning();
+    return result[0];
+  }
+
+  async updateOrganizationSettings(organizationId: string, updates: Partial<InsertOrganizationSettings>): Promise<OrganizationSettings | undefined> {
+    const result = await db.update(organizationSettings)
+      .set(updates)
+      .where(eq(organizationSettings.organizationId, organizationId))
+      .returning();
+    return result[0];
+  }
+
+  // Service Area operations
+  async getServiceAreasByOrganization(organizationId: string): Promise<ServiceArea[]> {
+    return await db.select().from(serviceAreas)
+      .where(eq(serviceAreas.organizationId, organizationId))
+      .orderBy(serviceAreas.zipCode);
+  }
+
+  async createServiceArea(insertArea: InsertServiceArea): Promise<ServiceArea> {
+    const result = await db.insert(serviceAreas).values(insertArea).returning();
+    return result[0];
+  }
+
+  async deleteServiceArea(id: string): Promise<void> {
+    await db.delete(serviceAreas).where(eq(serviceAreas.id, id));
+  }
+
+  // Team/User operations
+  async getUsersByOrganization(organizationId: string): Promise<User[]> {
+    return await db.select().from(users)
+      .where(eq(users.organizationId, organizationId))
+      .orderBy(users.email);
   }
 }
 

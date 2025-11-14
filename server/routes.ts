@@ -568,6 +568,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Organization Settings endpoints
+  app.get("/api/settings", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ message: "User has no organization" });
+      }
+
+      let settings = await storage.getOrganizationSettings(req.user.organizationId);
+
+      // Create default settings if they don't exist
+      if (!settings) {
+        settings = await storage.createOrganizationSettings({
+          organizationId: req.user.organizationId,
+        });
+      }
+
+      res.json(settings);
+    } catch (error) {
+      console.error("Get settings error:", error);
+      res.status(500).json({ message: "Failed to get settings" });
+    }
+  });
+
+  app.patch("/api/settings", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ message: "User has no organization" });
+      }
+
+      const settings = await storage.updateOrganizationSettings(req.user.organizationId, req.body);
+      res.json(settings);
+    } catch (error) {
+      console.error("Update settings error:", error);
+      res.status(500).json({ message: "Failed to update settings" });
+    }
+  });
+
+  // Service Areas endpoints
+  app.get("/api/service-areas", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ message: "User has no organization" });
+      }
+
+      const areas = await storage.getServiceAreasByOrganization(req.user.organizationId);
+      res.json(areas);
+    } catch (error) {
+      console.error("Get service areas error:", error);
+      res.status(500).json({ message: "Failed to get service areas" });
+    }
+  });
+
+  app.post("/api/service-areas", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ message: "User has no organization" });
+      }
+
+      const areaData = {
+        ...req.body,
+        organizationId: req.user.organizationId,
+      };
+
+      const area = await storage.createServiceArea(areaData);
+      res.status(201).json(area);
+    } catch (error) {
+      console.error("Create service area error:", error);
+      res.status(500).json({ message: "Failed to create service area" });
+    }
+  });
+
+  app.delete("/api/service-areas/:id", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      await storage.deleteServiceArea(req.params.id);
+      res.json({ message: "Service area deleted successfully" });
+    } catch (error) {
+      console.error("Delete service area error:", error);
+      res.status(500).json({ message: "Failed to delete service area" });
+    }
+  });
+
+  // Team Management endpoints
+  app.get("/api/team", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ message: "User has no organization" });
+      }
+
+      const teamMembers = await storage.getUsersByOrganization(req.user.organizationId);
+
+      // Remove password hashes from response
+      const safeTeamMembers = teamMembers.map(({ passwordHash, ...user }) => user);
+
+      res.json(safeTeamMembers);
+    } catch (error) {
+      console.error("Get team error:", error);
+      res.status(500).json({ message: "Failed to get team members" });
+    }
+  });
+
+  app.patch("/api/team/:id", requireAuth, requireRole("org_owner"), async (req: AuthRequest, res) => {
+    try {
+      const { role } = req.body;
+
+      if (!role || !["org_admin", "customer"].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+
+      // Get the user to verify they're in the same organization
+      const targetUser = await storage.getUser(req.params.id);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      if (targetUser.organizationId !== req.user?.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Update user role (implementation would need to be added to storage)
+      // For now, return error since we don't have updateUser method
+      res.status(501).json({ message: "User role update not yet implemented" });
+    } catch (error) {
+      console.error("Update team member error:", error);
+      res.status(500).json({ message: "Failed to update team member" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
