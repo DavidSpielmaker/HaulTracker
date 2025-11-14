@@ -15,6 +15,7 @@ import Settings from "@/pages/Settings";
 import TeamManagement from "@/pages/TeamManagement";
 import AdminDashboard from "@/pages/AdminDashboard";
 import OrganizationForm from "@/pages/OrganizationForm";
+import ApiDocs from "@/pages/ApiDocs";
 
 function Router() {
   return (
@@ -22,6 +23,7 @@ function Router() {
       {/* Public routes */}
       <Route path="/" component={LandingPage} />
       <Route path="/login" component={DashboardLogin} />
+      <Route path="/api-docs" component={ApiDocs} />
 
       {/* Dashboard routes */}
       <Route path="/dashboard" component={DashboardHome} />
