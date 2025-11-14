@@ -9,6 +9,8 @@ import Home from "@/pages/Home";
 import BookingFlow from "@/pages/BookingFlow";
 import DashboardLogin from "@/pages/DashboardLogin";
 import DashboardHome from "@/pages/DashboardHome";
+import BookingsManagement from "@/pages/BookingsManagement";
+import InventoryManagement from "@/pages/InventoryManagement";
 import AdminDashboard from "@/pages/AdminDashboard";
 import OrganizationForm from "@/pages/OrganizationForm";
 import BookingPage from "@/pages/BookingPage";
@@ -21,6 +23,8 @@ function Router() {
       <Route path="/book" component={BookingFlow} />
       <Route path="/dashboard/login" component={DashboardLogin} />
       <Route path="/dashboard" component={DashboardHome} />
+      <Route path="/dashboard/bookings" component={BookingsManagement} />
+      <Route path="/dashboard/inventory" component={InventoryManagement} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/organizations/new" component={OrganizationForm} />
       <Route path="/admin/organizations/:id" component={OrganizationForm} />

@@ -3,43 +3,21 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 import KPICard from "@/components/KPICard";
 import BookingTable from "@/components/BookingTable";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { Truck, Calendar, Package, DollarSign } from "lucide-react";
-
-// TODO: remove mock functionality
-const mockBookings = [
-  {
-    id: "1",
-    bookingNumber: "BK-2024-001",
-    customerName: "John Smith",
-    dumpsterType: "20 Yard",
-    deliveryDate: "2024-01-15",
-    pickupDate: "2024-01-22",
-    status: "confirmed",
-    total: 425.00
-  },
-  {
-    id: "2",
-    bookingNumber: "BK-2024-002",
-    customerName: "Sarah Johnson",
-    dumpsterType: "10 Yard",
-    deliveryDate: "2024-01-16",
-    pickupDate: "2024-01-23",
-    status: "delivered",
-    total: 299.00
-  },
-  {
-    id: "3",
-    bookingNumber: "BK-2024-003",
-    customerName: "Mike Wilson",
-    dumpsterType: "30 Yard",
-    deliveryDate: "2024-01-18",
-    pickupDate: "2024-01-25",
-    status: "pending",
-    total: 575.00
-  }
-];
+import { Truck, Calendar, Package, DollarSign, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import type { Booking } from "@shared/schema";
 
 export default function DashboardHome() {
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ["/api/dashboard/stats"],
+  });
+
+  const { data: bookings, isLoading: bookingsLoading } = useQuery<Booking[]>({
+    queryKey: ["/api/bookings"],
+  });
+
+  // Get the 5 most recent bookings
+  const recentBookings = bookings?.slice(0, 5) || [];
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
@@ -57,44 +35,66 @@ export default function DashboardHome() {
             <div className="w-10"></div>
           </header>
           <main className="flex-1 overflow-auto p-6">
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
-              <KPICard
-                title="Today's Deliveries"
-                value={8}
-                icon={Truck}
-                description="Scheduled for delivery"
-              />
-              <KPICard
-                title="Today's Pickups"
-                value={5}
-                icon={Calendar}
-                description="Scheduled for pickup"
-              />
-              <KPICard
-                title="Available Units"
-                value={24}
-                icon={Package}
-                description="Ready to rent"
-              />
-              <KPICard
-                title="Monthly Revenue"
-                value="$12,450"
-                icon={DollarSign}
-                trend={{ value: 12, isPositive: true }}
-              />
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold mb-4" data-testid="text-recent-bookings-title">
-                  Recent Bookings
-                </h2>
-                <BookingTable 
-                  bookings={mockBookings}
-                  onView={(id) => console.log('View booking:', id)}
-                />
+            {statsLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                  <KPICard
+                    title="Today's Deliveries"
+                    value={stats?.todayDeliveries || 0}
+                    icon={Truck}
+                    description="Scheduled for delivery"
+                  />
+                  <KPICard
+                    title="Today's Pickups"
+                    value={stats?.todayPickups || 0}
+                    icon={Calendar}
+                    description="Scheduled for pickup"
+                  />
+                  <KPICard
+                    title="Available Units"
+                    value={stats?.availableUnits || 0}
+                    icon={Package}
+                    description="Ready to rent"
+                  />
+                  <KPICard
+                    title="Monthly Revenue"
+                    value={`$${(stats?.monthlyRevenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    icon={DollarSign}
+                  />
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-xl font-semibold mb-4" data-testid="text-recent-bookings-title">
+                      Recent Bookings
+                    </h2>
+                    {bookingsLoading ? (
+                      <div className="flex items-center justify-center h-32">
+                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                      </div>
+                    ) : (
+                      <BookingTable
+                        bookings={recentBookings.map(b => ({
+                          id: b.id,
+                          bookingNumber: `BK-${b.id}`,
+                          customerName: `${b.customerFirstName} ${b.customerLastName}`,
+                          dumpsterType: "Dumpster", // TODO: Join with dumpster type
+                          deliveryDate: new Date(b.deliveryDate).toLocaleDateString(),
+                          pickupDate: b.pickupDate ? new Date(b.pickupDate).toLocaleDateString() : "TBD",
+                          status: b.status,
+                          total: Number(b.totalAmount)
+                        }))}
+                        onView={(id) => console.log('View booking:', id)}
+                      />
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </main>
         </div>
       </div>

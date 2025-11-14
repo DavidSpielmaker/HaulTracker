@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { 
+import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
@@ -11,19 +11,20 @@ import {
   SidebarHeader,
   SidebarFooter
 } from "@/components/ui/sidebar";
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  Package, 
-  FileText, 
-  Settings, 
-  Users, 
+import {
+  LayoutDashboard,
+  Calendar,
+  Package,
+  FileText,
+  Settings,
+  Users,
   DollarSign,
   Truck,
   LogOut
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth";
 
 const menuItems = [
   {
@@ -64,7 +65,39 @@ const menuItems = [
 ];
 
 export default function DashboardSidebar() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    setLocation("/dashboard/login");
+  };
+
+  // Get user initials
+  const getInitials = () => {
+    if (!user) return "U";
+    if (user.firstName && user.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+    }
+    return user.email[0].toUpperCase();
+  };
+
+  // Format role for display
+  const getRoleDisplay = () => {
+    if (!user) return "";
+    switch (user.role) {
+      case "org_owner":
+        return "Owner";
+      case "org_admin":
+        return "Admin";
+      case "super_admin":
+        return "Super Admin";
+      case "customer":
+        return "Customer";
+      default:
+        return user.role;
+    }
+  };
 
   return (
     <Sidebar data-testid="dashboard-sidebar">
@@ -100,13 +133,27 @@ export default function DashboardSidebar() {
       <SidebarFooter className="p-4">
         <div className="flex items-center gap-3 px-2 py-2">
           <Avatar className="h-8 w-8">
-            <AvatarFallback className="text-xs" data-testid="avatar-user">JD</AvatarFallback>
+            <AvatarFallback className="text-xs" data-testid="avatar-user">
+              {getInitials()}
+            </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate" data-testid="text-user-name">John Doe</p>
-            <p className="text-xs text-muted-foreground truncate" data-testid="text-user-role">Owner</p>
+            <p className="text-sm font-medium truncate" data-testid="text-user-name">
+              {user?.firstName && user?.lastName
+                ? `${user.firstName} ${user.lastName}`
+                : user?.email || "User"}
+            </p>
+            <p className="text-xs text-muted-foreground truncate" data-testid="text-user-role">
+              {getRoleDisplay()}
+            </p>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-logout">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={handleLogout}
+            data-testid="button-logout"
+          >
             <LogOut className="h-4 w-4" />
           </Button>
         </div>
