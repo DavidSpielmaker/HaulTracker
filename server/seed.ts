@@ -196,10 +196,126 @@ async function seed() {
   await db.insert(serviceAreas).values(serviceAreasData);
   console.log("✅ Created", serviceAreasData.length, "service areas");
 
+  // Create test organization
+  const [testOrg] = await db.insert(organizations).values({
+    name: "Test Dumpster Co",
+    slug: "test-dumpster-co",
+    businessName: "Test Dumpster Company LLC",
+    email: "info@testdumpster.com",
+    phone: "(555) 123-4567",
+    address: "456 Test Ave",
+    city: "Test City",
+    state: "TX",
+    zip: "75001",
+    serviceAreaRadius: 25,
+    taxRate: "0.0825", // 8.25% tax rate
+    status: "active",
+    website: "https://www.testdumpster.com",
+    logo: null,
+    primaryColor: "0 0% 9%",
+    secondaryColor: "0 0% 9%",
+  }).returning();
+
+  console.log("✅ Created test organization:", testOrg.name);
+
+  // Create test organization settings
+  await db.insert(organizationSettings).values({
+    organizationId: testOrg.id,
+    minimumRentalDays: 7,
+    turnaroundHours: 24,
+    leadTimeHours: 48,
+    requireCustomerAccount: false,
+    allowSameDayPickup: true,
+    bookingConfirmationEmail: true,
+    reminderEmailHoursBefore: 24,
+    cancellationHoursNotice: 24,
+    cancellationFeePercent: "20",
+  });
+
+  console.log("✅ Created test organization settings");
+
+  // Create test organization owner
+  const [testOwner] = await db.insert(users).values({
+    email: "owner@testdumpster.com",
+    passwordHash: passwordHash,
+    firstName: "Test",
+    lastName: "Owner",
+    phone: "(555) 123-4567",
+    role: "org_owner",
+    organizationId: testOrg.id,
+    emailVerified: true,
+  }).returning();
+
+  console.log("✅ Created test organization owner");
+
+  // Create test dumpster types (simpler set)
+  const testDumpsterTypes = [
+    {
+      organizationId: testOrg.id,
+      name: "15 Yard Dumpster",
+      sizeYards: 15,
+      capacityDescription: "Medium-sized dumpster for residential projects",
+      dailyRate: "55.00",
+      weeklyRate: "350.00",
+      weightLimitTons: "3.00",
+      overageFeePerTon: "80.00",
+      imageUrl: null,
+      isActive: true,
+    },
+    {
+      organizationId: testOrg.id,
+      name: "25 Yard Dumpster",
+      sizeYards: 25,
+      capacityDescription: "Large dumpster for bigger projects",
+      dailyRate: "75.00",
+      weeklyRate: "500.00",
+      weightLimitTons: "5.00",
+      overageFeePerTon: "80.00",
+      imageUrl: null,
+      isActive: true,
+    },
+  ];
+
+  const testCreatedTypes = await db.insert(dumpsterTypes).values(testDumpsterTypes).returning();
+  console.log("✅ Created", testCreatedTypes.length, "test dumpster types");
+
+  // Create test inventory
+  let testTotalInventory = 0;
+  for (const type of testCreatedTypes) {
+    const inventoryCount = 5; // 5 units of each type
+    const inventoryItems = [];
+
+    for (let i = 1; i <= inventoryCount; i++) {
+      inventoryItems.push({
+        organizationId: testOrg.id,
+        dumpsterTypeId: type.id,
+        unitNumber: `TEST-${type.sizeYards}Y-${String(i).padStart(3, '0')}`,
+        status: "available" as const,
+      });
+    }
+
+    await db.insert(dumpsterInventory).values(inventoryItems);
+    testTotalInventory += inventoryCount;
+  }
+  console.log("✅ Created", testTotalInventory, "test inventory units");
+
+  // Create test service areas (Dallas area)
+  const testServiceAreas = [
+    { organizationId: testOrg.id, zipCode: "75001", deliveryFee: "50.00", isActive: true },
+    { organizationId: testOrg.id, zipCode: "75002", deliveryFee: "50.00", isActive: true },
+    { organizationId: testOrg.id, zipCode: "75006", deliveryFee: "55.00", isActive: true },
+    { organizationId: testOrg.id, zipCode: "75007", deliveryFee: "55.00", isActive: true },
+    { organizationId: testOrg.id, zipCode: "75019", deliveryFee: "60.00", isActive: true },
+  ];
+
+  await db.insert(serviceAreas).values(testServiceAreas);
+  console.log("✅ Created", testServiceAreas.length, "test service areas");
+
   console.log("\n✨ Seed complete!");
   console.log("\nLogin credentials:");
   console.log("Super Admin: admin@dumpsterpro.com / admin123");
-  console.log("Org Owner: owner@1calljunkremoval.com / admin123");
+  console.log("Org Owner (1 Call): owner@1calljunkremoval.com / admin123");
+  console.log("Org Owner (Test): owner@testdumpster.com / admin123");
 }
 
 seed()
