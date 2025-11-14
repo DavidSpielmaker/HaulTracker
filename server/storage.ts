@@ -7,6 +7,8 @@ import {
   dumpsterInventory,
   organizationSettings,
   serviceAreas,
+  apiKeys,
+  webhooks,
   type User,
   type InsertUser,
   type Organization,
@@ -20,10 +22,15 @@ import {
   type OrganizationSettings,
   type InsertOrganizationSettings,
   type ServiceArea,
-  type InsertServiceArea
+  type InsertServiceArea,
+  type ApiKey,
+  type InsertApiKey,
+  type Webhook,
+  type InsertWebhook
 } from "@shared/schema";
 import { eq, and, gte, lte, count, sum, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 
 export interface IStorage {
   // User operations
@@ -85,6 +92,22 @@ export interface IStorage {
 
   // Team/User operations
   getUsersByOrganization(organizationId: string): Promise<User[]>;
+
+  // API Key operations
+  createApiKey(apiKey: Omit<InsertApiKey, 'key'> & { rawKey: string }): Promise<ApiKey>;
+  getApiKeysByOrganization(organizationId: string): Promise<ApiKey[]>;
+  getApiKeyByKey(key: string): Promise<ApiKey | undefined>;
+  updateApiKeyLastUsed(id: string): Promise<void>;
+  deleteApiKey(id: string): Promise<void>;
+  hashApiKey(key: string): string;
+  verifyApiKey(rawKey: string, hashedKey: string): boolean;
+
+  // Webhook operations
+  getWebhooksByOrganization(organizationId: string): Promise<Webhook[]>;
+  createWebhook(webhook: InsertWebhook): Promise<Webhook>;
+  updateWebhook(id: string, updates: Partial<InsertWebhook>): Promise<Webhook | undefined>;
+  deleteWebhook(id: string): Promise<void>;
+  updateWebhookLastTriggered(id: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -360,6 +383,84 @@ export class DbStorage implements IStorage {
     return await db.select().from(users)
       .where(eq(users.organizationId, organizationId))
       .orderBy(users.email);
+  }
+
+  // API Key operations
+  hashApiKey(key: string): string {
+    return crypto.createHash('sha256').update(key).digest('hex');
+  }
+
+  verifyApiKey(rawKey: string, hashedKey: string): boolean {
+    return this.hashApiKey(rawKey) === hashedKey;
+  }
+
+  async createApiKey(apiKeyData: Omit<InsertApiKey, 'key'> & { rawKey: string }): Promise<ApiKey> {
+    const { rawKey, ...data } = apiKeyData;
+    const hashedKey = this.hashApiKey(rawKey);
+
+    const result = await db.insert(apiKeys).values({
+      ...data,
+      key: hashedKey,
+    }).returning();
+
+    return result[0];
+  }
+
+  async getApiKeysByOrganization(organizationId: string): Promise<ApiKey[]> {
+    return await db.select().from(apiKeys)
+      .where(eq(apiKeys.organizationId, organizationId))
+      .orderBy(sql`${apiKeys.createdAt} DESC`);
+  }
+
+  async getApiKeyByKey(key: string): Promise<ApiKey | undefined> {
+    const hashedKey = this.hashApiKey(key);
+    const result = await db.select().from(apiKeys)
+      .where(and(
+        eq(apiKeys.key, hashedKey),
+        eq(apiKeys.isActive, true)
+      ))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateApiKeyLastUsed(id: string): Promise<void> {
+    await db.update(apiKeys)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(apiKeys.id, id));
+  }
+
+  async deleteApiKey(id: string): Promise<void> {
+    await db.delete(apiKeys).where(eq(apiKeys.id, id));
+  }
+
+  // Webhook operations
+  async getWebhooksByOrganization(organizationId: string): Promise<Webhook[]> {
+    return await db.select().from(webhooks)
+      .where(eq(webhooks.organizationId, organizationId))
+      .orderBy(sql`${webhooks.createdAt} DESC`);
+  }
+
+  async createWebhook(webhookData: InsertWebhook): Promise<Webhook> {
+    const result = await db.insert(webhooks).values(webhookData).returning();
+    return result[0];
+  }
+
+  async updateWebhook(id: string, updates: Partial<InsertWebhook>): Promise<Webhook | undefined> {
+    const result = await db.update(webhooks)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(webhooks.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteWebhook(id: string): Promise<void> {
+    await db.delete(webhooks).where(eq(webhooks.id, id));
+  }
+
+  async updateWebhookLastTriggered(id: string): Promise<void> {
+    await db.update(webhooks)
+      .set({ lastTriggeredAt: new Date() })
+      .where(eq(webhooks.id, id));
   }
 }
 

@@ -226,6 +226,32 @@ export const organizationSettings = pgTable("organization_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// API Keys Table
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  name: text("name").notNull(), // e.g., "Production API Key", "Staging Key"
+  key: text("key").notNull().unique(), // The actual API key (hashed)
+  keyPrefix: varchar("key_prefix", { length: 8 }).notNull(), // First 8 chars for display (e.g., "pk_live_")
+  isActive: boolean("is_active").default(true).notNull(),
+  lastUsedAt: timestamp("last_used_at"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Webhooks Table
+export const webhooks = pgTable("webhooks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  url: text("url").notNull(),
+  events: json("events").$type<string[]>().notNull(), // ["booking.created", "booking.updated", etc.]
+  secret: text("secret").notNull(), // For webhook signature verification
+  isActive: boolean("is_active").default(true).notNull(),
+  lastTriggeredAt: timestamp("last_triggered_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert Schemas and Types
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({
   id: true,
@@ -290,6 +316,23 @@ export const insertOrganizationSettingsSchema = createInsertSchema(organizationS
 });
 export type InsertOrganizationSettings = z.infer<typeof insertOrganizationSettingsSchema>;
 export type OrganizationSettings = typeof organizationSettings.$inferSelect;
+
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
+  id: true,
+  createdAt: true,
+  lastUsedAt: true,
+});
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
+export type ApiKey = typeof apiKeys.$inferSelect;
+
+export const insertWebhookSchema = createInsertSchema(webhooks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastTriggeredAt: true,
+});
+export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
+export type Webhook = typeof webhooks.$inferSelect;
 
 export const insertQuoteSchema = createInsertSchema(junkHaulingQuotes).omit({
   id: true,

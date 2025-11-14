@@ -7,6 +7,7 @@ import { storage } from "./storage";
 import { requireAuth, requireRole, type AuthRequest } from "./middleware/auth";
 import { insertUserSchema, insertOrganizationSchema, type User } from "@shared/schema";
 import { z } from "zod";
+import crypto from "crypto";
 
 const PgSession = ConnectPgSimple(session);
 
@@ -663,6 +664,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Update team member error:", error);
       res.status(500).json({ message: "Failed to update team member" });
+    }
+  });
+
+  // API Key endpoints
+  app.get("/api/api-keys", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ message: "User has no organization" });
+      }
+
+      const keys = await storage.getApiKeysByOrganization(req.user.organizationId);
+      res.json(keys);
+    } catch (error) {
+      console.error("Get API keys error:", error);
+      res.status(500).json({ message: "Failed to get API keys" });
+    }
+  });
+
+  app.post("/api/api-keys", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ message: "User has no organization" });
+      }
+
+      const { name, expiresAt } = req.body;
+
+      // Generate a secure API key
+      const rawKey = `htk_${crypto.randomBytes(32).toString('hex')}`;
+      const keyPrefix = rawKey.substring(0, 12);
+
+      const apiKey = await storage.createApiKey({
+        organizationId: req.user.organizationId,
+        name,
+        rawKey,
+        keyPrefix,
+        isActive: true,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      });
+
+      // Return the raw key ONLY on creation (user must save it now)
+      res.status(201).json({ ...apiKey, rawKey });
+    } catch (error) {
+      console.error("Create API key error:", error);
+      res.status(500).json({ message: "Failed to create API key" });
+    }
+  });
+
+  app.delete("/api/api-keys/:id", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      await storage.deleteApiKey(req.params.id);
+      res.json({ message: "API key deleted successfully" });
+    } catch (error) {
+      console.error("Delete API key error:", error);
+      res.status(500).json({ message: "Failed to delete API key" });
+    }
+  });
+
+  // Webhook endpoints
+  app.get("/api/webhooks", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ message: "User has no organization" });
+      }
+
+      const hooks = await storage.getWebhooksByOrganization(req.user.organizationId);
+      res.json(hooks);
+    } catch (error) {
+      console.error("Get webhooks error:", error);
+      res.status(500).json({ message: "Failed to get webhooks" });
+    }
+  });
+
+  app.post("/api/webhooks", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.organizationId) {
+        return res.status(400).json({ message: "User has no organization" });
+      }
+
+      const { url, events } = req.body;
+
+      // Generate webhook secret for signature verification
+      const secret = crypto.randomBytes(32).toString('hex');
+
+      const webhook = await storage.createWebhook({
+        organizationId: req.user.organizationId,
+        url,
+        events,
+        secret,
+        isActive: true,
+      });
+
+      res.status(201).json(webhook);
+    } catch (error) {
+      console.error("Create webhook error:", error);
+      res.status(500).json({ message: "Failed to create webhook" });
+    }
+  });
+
+  app.patch("/api/webhooks/:id", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      const webhook = await storage.updateWebhook(req.params.id, req.body);
+      res.json(webhook);
+    } catch (error) {
+      console.error("Update webhook error:", error);
+      res.status(500).json({ message: "Failed to update webhook" });
+    }
+  });
+
+  app.delete("/api/webhooks/:id", requireAuth, requireRole("org_owner", "org_admin"), async (req: AuthRequest, res) => {
+    try {
+      await storage.deleteWebhook(req.params.id);
+      res.json({ message: "Webhook deleted successfully" });
+    } catch (error) {
+      console.error("Delete webhook error:", error);
+      res.status(500).json({ message: "Failed to delete webhook" });
+    }
+  });
+
+  // Public API endpoints (authenticated via API key)
+  app.post("/api/v1/bookings", async (req, res) => {
+    try {
+      const apiKey = req.headers["x-api-key"] as string;
+
+      if (!apiKey) {
+        return res.status(401).json({ error: "API key required" });
+      }
+
+      const key = await storage.getApiKeyByKey(apiKey);
+
+      if (!key) {
+        return res.status(401).json({ error: "Invalid API key" });
+      }
+
+      // Update last used timestamp
+      await storage.updateApiKeyLastUsed(key.id);
+
+      // Create booking with the organization from the API key
+      const bookingData = {
+        ...req.body,
+        organizationId: key.organizationId,
+      };
+
+      const booking = await storage.createBooking(bookingData);
+
+      res.status(201).json(booking);
+    } catch (error) {
+      console.error("Public API create booking error:", error);
+      res.status(500).json({ error: "Failed to create booking" });
     }
   });
 
