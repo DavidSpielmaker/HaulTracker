@@ -145,7 +145,8 @@ export default function Settings() {
 
   const createApiKeyMutation = useMutation({
     mutationFn: async (data: { name: string; expiresAt?: string }) => {
-      return await apiRequest("POST", "/api/api-keys", data);
+      const response = await apiRequest("POST", "/api/api-keys", data);
+      return await response.json();
     },
     onSuccess: (data: ApiKey & { rawKey: string }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/api-keys"] });
