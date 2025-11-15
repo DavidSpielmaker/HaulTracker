@@ -51,11 +51,11 @@ export default function AdminDashboard() {
       </div>
     );
   }
-  const { data: organizations, isLoading: queryLoading } = useQuery<Organization[]>({
+  const { data: organizations, isLoading: queryLoading, error: orgsError } = useQuery<Organization[]>({
     queryKey: ["/api/admin/organizations"],
   });
 
-  const { data: orgUsers } = useQuery<User[]>({
+  const { data: orgUsers, error: usersError } = useQuery<User[]>({
     queryKey: ["/api/admin/organizations", selectedOrgForUsers, "users"],
     queryFn: async () => {
       if (!selectedOrgForUsers) return [];
@@ -63,6 +63,14 @@ export default function AdminDashboard() {
     },
     enabled: !!selectedOrgForUsers,
   });
+
+  // Log errors for debugging
+  if (orgsError) {
+    console.error("Error loading organizations:", orgsError);
+  }
+  if (usersError) {
+    console.error("Error loading users:", usersError);
+  }
 
   const inviteUserMutation = useMutation({
     mutationFn: async (data: {
@@ -135,6 +143,22 @@ export default function AdminDashboard() {
       </div>
     );
   }
+
+  if (orgsError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Error Loading Organizations</h2>
+          <p className="text-muted-foreground">{orgsError instanceof Error ? orgsError.message : 'Unknown error'}</p>
+          <Button onClick={() => window.location.reload()} className="mt-4">
+            Reload Page
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  console.log('Organizations loaded:', organizations);
 
   return (
     <div className="flex min-h-screen bg-background">
