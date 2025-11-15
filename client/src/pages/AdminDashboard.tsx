@@ -43,6 +43,12 @@ export default function AdminDashboard() {
   console.log('Admin Dashboard - User:', user);
   console.log('Admin Dashboard - Auth Loading:', authLoading);
 
+  // Queries must be called before any conditional returns
+  const { data: organizations, isLoading: queryLoading, error: orgsError } = useQuery<Organization[]>({
+    queryKey: ["/api/admin/organizations"],
+    enabled: !authLoading && user?.role === "super_admin", // Only run when authenticated as super_admin
+  });
+
   // Redirect if not authenticated or not super_admin
   if (!authLoading && (!user || user.role !== "super_admin")) {
     console.log('Redirecting - not super admin. User role:', user?.role);
@@ -56,9 +62,6 @@ export default function AdminDashboard() {
       </div>
     );
   }
-  const { data: organizations, isLoading: queryLoading, error: orgsError } = useQuery<Organization[]>({
-    queryKey: ["/api/admin/organizations"],
-  });
 
   const { data: orgUsers, error: usersError } = useQuery<User[]>({
     queryKey: ["/api/admin/organizations", selectedOrgForUsers, "users"],

@@ -254,7 +254,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all organizations
   app.get("/api/admin/organizations", requireAuth, requireRole("super_admin"), async (req: AuthRequest, res) => {
     try {
+      console.log("[ADMIN] Getting all organizations");
       const orgs = await storage.getAllOrganizations();
+      console.log(`[ADMIN] Found ${orgs.length} organizations`);
       res.json(orgs);
     } catch (error) {
       console.error("Get organizations error:", error);
