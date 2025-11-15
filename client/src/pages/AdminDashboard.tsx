@@ -68,7 +68,8 @@ export default function AdminDashboard() {
     queryFn: async () => {
       if (!selectedOrgForUsers) return [];
       console.log(`Fetching users for organization: ${selectedOrgForUsers}`);
-      const users = await apiRequest("GET", `/api/admin/organizations/${selectedOrgForUsers}/users`);
+      const response = await apiRequest("GET", `/api/admin/organizations/${selectedOrgForUsers}/users`);
+      const users = await response.json();
       console.log(`Received ${users?.length || 0} users:`, users);
       return users;
     },
