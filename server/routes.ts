@@ -39,7 +39,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict", // CSRF protection
+        sameSite: process.env.NODE_ENV === "production" ? "lax" : "strict", // Allow cookies in production
       },
     })
   );
@@ -152,9 +152,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Set session
         req.session.userId = user.id;
 
-        // Return user without password hash
-        const { passwordHash: _, ...userWithoutHash } = user;
-        res.json(userWithoutHash);
+        // Save session explicitly
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.status(500).json({ message: "Failed to save session" });
+          }
+
+          console.log(`[LOGIN] Session saved for user ${user.id}, session ID: ${req.sessionID}`);
+
+          // Return user without password hash
+          const { passwordHash: _, ...userWithoutHash } = user;
+          res.json(userWithoutHash);
+        });
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -177,16 +187,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/auth/me", async (req, res) => {
+    console.log(`[AUTH/ME] Session ID: ${req.sessionID}, User ID in session: ${req.session.userId}`);
+    console.log(`[AUTH/ME] Session data:`, req.session);
+
     if (!req.session.userId) {
+      console.log(`[AUTH/ME] No userId in session, returning 401`);
       return res.status(401).json({ message: "Not authenticated" });
     }
 
     try {
       const user = await storage.getUser(req.session.userId);
       if (!user) {
+        console.log(`[AUTH/ME] User not found for ID: ${req.session.userId}`);
         return res.status(404).json({ message: "User not found" });
       }
 
+      console.log(`[AUTH/ME] User found: ${user.email}`);
       const { passwordHash: _, ...userWithoutHash } = user;
       res.json(userWithoutHash);
     } catch (error) {
