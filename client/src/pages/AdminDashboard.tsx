@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, Redirect } from "wouter";
-import { Plus, Building2, Users, Settings, LogOut, UserPlus, Mail } from "lucide-react";
+import { Plus, Building2, Users, Settings, LogOut, UserPlus, Mail, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -38,6 +38,11 @@ export default function AdminDashboard() {
   const [inviteLastName, setInviteLastName] = useState("");
   const [inviteRole, setInviteRole] = useState<"org_owner" | "org_admin" | "org_member">("org_member");
   const [selectedOrgForUsers, setSelectedOrgForUsers] = useState<string | null>(null);
+  const [billingDialogOpen, setBillingDialogOpen] = useState(false);
+  const [selectedOrgForBilling, setSelectedOrgForBilling] = useState<Organization | null>(null);
+  const [billingAmount, setBillingAmount] = useState("");
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "quarterly" | "annual">("monthly");
+  const [trialDays, setTrialDays] = useState("30");
 
   // Debug logging
   console.log('Admin Dashboard - User:', user);
@@ -150,6 +155,69 @@ export default function AdminDashboard() {
       firstName: inviteFirstName,
       lastName: inviteLastName,
       role: inviteRole,
+    });
+  };
+
+  const updateBillingMutation = useMutation({
+    mutationFn: async (data: {
+      organizationId: string;
+      subscriptionAmount: string;
+      billingCycle: "monthly" | "quarterly" | "annual";
+      trialDays: number;
+    }) => {
+      const trialEndsAt = new Date();
+      trialEndsAt.setDate(trialEndsAt.getDate() + data.trialDays);
+
+      const response = await apiRequest("PATCH", `/api/admin/organizations/${data.organizationId}`, {
+        subscriptionAmount: data.subscriptionAmount,
+        billingCycle: data.billingCycle,
+        trialEndsAt: trialEndsAt.toISOString(),
+      });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations"] });
+      toast({
+        title: "Success",
+        description: "Billing settings updated successfully",
+      });
+      setBillingDialogOpen(false);
+      setSelectedOrgForBilling(null);
+      setBillingAmount("");
+      setBillingCycle("monthly");
+      setTrialDays("30");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update billing settings",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleOpenBillingDialog = (org: Organization) => {
+    setSelectedOrgForBilling(org);
+    setBillingAmount(org.subscriptionAmount?.toString() || "");
+    setBillingCycle(org.billingCycle || "monthly");
+    setBillingDialogOpen(true);
+  };
+
+  const handleSubmitBilling = () => {
+    if (!selectedOrgForBilling || !billingAmount) {
+      toast({
+        title: "Error",
+        description: "Please enter a subscription amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    updateBillingMutation.mutate({
+      organizationId: selectedOrgForBilling.id,
+      subscriptionAmount: billingAmount,
+      billingCycle,
+      trialDays: parseInt(trialDays) || 30,
     });
   };
 
@@ -282,6 +350,15 @@ export default function AdminDashboard() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              onClick={() => handleOpenBillingDialog(org)}
+                            >
+                              <DollarSign className="h-3 w-3" />
+                              Billing
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -470,6 +547,119 @@ export default function AdminDashboard() {
               disabled={inviteUserMutation.isPending}
             >
               {inviteUserMutation.isPending ? "Inviting..." : "Invite User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Billing Settings Dialog */}
+      <Dialog open={billingDialogOpen} onOpenChange={setBillingDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Billing Settings</DialogTitle>
+            <DialogDescription>
+              Configure billing for {selectedOrgForBilling?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="subscriptionAmount">Subscription Amount</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  id="subscriptionAmount"
+                  type="number"
+                  step="0.01"
+                  placeholder="99.00"
+                  className="pl-7"
+                  value={billingAmount}
+                  onChange={(e) => setBillingAmount(e.target.value)}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Monthly subscription amount
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="billingCycle">Billing Cycle</Label>
+              <Select value={billingCycle} onValueChange={(value: any) => setBillingCycle(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly (3 months)</SelectItem>
+                  <SelectItem value="annual">Annual (12 months)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                How often this organization is billed
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="trialDays">Trial Period (days)</Label>
+              <Input
+                id="trialDays"
+                type="number"
+                placeholder="30"
+                value={trialDays}
+                onChange={(e) => setTrialDays(e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
+                Days until billing begins (from today)
+              </p>
+            </div>
+
+            {billingAmount && (
+              <div className="mt-4 p-4 bg-muted rounded-lg">
+                <p className="text-sm font-medium mb-2">Billing Summary</p>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Amount:</span>
+                    <span className="font-medium">${billingAmount}/{billingCycle === "monthly" ? "mo" : billingCycle === "quarterly" ? "qtr" : "yr"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Trial ends:</span>
+                    <span className="font-medium">
+                      {new Date(Date.now() + parseInt(trialDays || "0") * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {billingCycle === "quarterly" && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount:</span>
+                      <span>5% off</span>
+                    </div>
+                  )}
+                  {billingCycle === "annual" && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount:</span>
+                      <span>15% off</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBillingDialogOpen(false);
+                setSelectedOrgForBilling(null);
+                setBillingAmount("");
+                setBillingCycle("monthly");
+                setTrialDays("30");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitBilling}
+              disabled={updateBillingMutation.isPending || !billingAmount}
+            >
+              {updateBillingMutation.isPending ? "Saving..." : "Save Billing Settings"}
             </Button>
           </DialogFooter>
         </DialogContent>
