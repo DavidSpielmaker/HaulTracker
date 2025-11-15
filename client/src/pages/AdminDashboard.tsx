@@ -39,8 +39,13 @@ export default function AdminDashboard() {
   const [inviteRole, setInviteRole] = useState<"org_owner" | "org_admin" | "org_member">("org_member");
   const [selectedOrgForUsers, setSelectedOrgForUsers] = useState<string | null>(null);
 
+  // Debug logging
+  console.log('Admin Dashboard - User:', user);
+  console.log('Admin Dashboard - Auth Loading:', authLoading);
+
   // Redirect if not authenticated or not super_admin
   if (!authLoading && (!user || user.role !== "super_admin")) {
+    console.log('Redirecting - not super admin. User role:', user?.role);
     return <Redirect to="/dashboard/login" />;
   }
 
