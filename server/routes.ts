@@ -324,6 +324,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get users for an organization (super admin only)
+  app.get("/api/admin/organizations/:id/users", requireAuth, requireRole("super_admin"), async (req: AuthRequest, res) => {
+    try {
+      const users = await storage.getUsersByOrganization(req.params.id);
+      // Return users without password hashes
+      const usersWithoutPasswords = users.map(({ passwordHash, ...user }) => user);
+      res.json(usersWithoutPasswords);
+    } catch (error) {
+      console.error("Get organization users error:", error);
+      res.status(500).json({ message: "Failed to get organization users" });
+    }
+  });
+
+  // Create user for an organization (super admin only)
+  app.post("/api/admin/organizations/:id/users", requireAuth, requireRole("super_admin"), async (req: AuthRequest, res) => {
+    try {
+      const createUserSchema = z.object({
+        email: z.string().email(),
+        password: z.string().min(8),
+        firstName: z.string().min(1),
+        lastName: z.string().min(1),
+        phone: z.string().optional(),
+        role: z.enum(["org_owner", "org_admin", "org_member"]),
+      });
+
+      const validatedData = createUserSchema.parse(req.body);
+      const normalizedEmail = validatedData.email.toLowerCase();
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmailAndOrg(normalizedEmail, req.params.id);
+      if (existingUser) {
+        return res.status(400).json({ message: "User with this email already exists in this organization" });
+      }
+
+      // Hash password
+      const passwordHash = await storage.hashPassword(validatedData.password);
+
+      // Create user
+      const { password, email, ...userDataWithoutPassword } = validatedData;
+      const user = await storage.createUser({
+        ...userDataWithoutPassword,
+        email: normalizedEmail,
+        passwordHash,
+        organizationId: req.params.id,
+        emailVerified: false, // User will need to change password on first login
+      });
+
+      // Return user without password hash
+      const { passwordHash: _, ...userWithoutHash } = user;
+      res.status(201).json(userWithoutHash);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      console.error("Create user error:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
 
   // Dashboard stats endpoint
   app.get("/api/dashboard/stats", requireAuth, async (req: AuthRequest, res) => {
