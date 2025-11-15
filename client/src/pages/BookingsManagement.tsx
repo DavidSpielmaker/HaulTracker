@@ -4,10 +4,12 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import type { Booking } from "@shared/schema";
+import type { Booking, DumpsterType } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -27,10 +29,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Search, Eye, Edit, Trash2 } from "lucide-react";
+import { Loader2, Search, Eye, Edit, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const statusColors: Record<string, string> = {
@@ -46,11 +49,29 @@ export default function BookingsManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Form state for creating booking
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryCity, setDeliveryCity] = useState("");
+  const [deliveryState, setDeliveryState] = useState("");
+  const [deliveryZip, setDeliveryZip] = useState("");
+  const [deliveryDate, setDeliveryDate] = useState("");
+  const [rentalDays, setRentalDays] = useState("7");
+  const [dumpsterTypeId, setDumpsterTypeId] = useState("");
+  const [specialInstructions, setSpecialInstructions] = useState("");
+
   const { data: bookings, isLoading } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
+  });
+
+  const { data: dumpsterTypes } = useQuery<DumpsterType[]>({
+    queryKey: ["/api/dumpster-types"],
   });
 
   const updateBookingMutation = useMutation({
@@ -93,6 +114,69 @@ export default function BookingsManagement() {
     },
   });
 
+  const createBookingMutation = useMutation({
+    mutationFn: async (bookingData: any) => {
+      const response = await apiRequest("POST", "/api/bookings", bookingData);
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      toast({
+        title: "Success",
+        description: "Booking created successfully",
+      });
+      setCreateDialogOpen(false);
+      resetForm();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create booking",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resetForm = () => {
+    setCustomerName("");
+    setCustomerEmail("");
+    setCustomerPhone("");
+    setDeliveryAddress("");
+    setDeliveryCity("");
+    setDeliveryState("");
+    setDeliveryZip("");
+    setDeliveryDate("");
+    setRentalDays("7");
+    setDumpsterTypeId("");
+    setSpecialInstructions("");
+  };
+
+  const handleCreateBooking = () => {
+    if (!customerName || !customerEmail || !customerPhone || !deliveryAddress ||
+        !deliveryCity || !deliveryState || !deliveryZip || !deliveryDate || !dumpsterTypeId) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createBookingMutation.mutate({
+      customerName,
+      customerEmail,
+      customerPhone,
+      deliveryAddress,
+      deliveryCity,
+      deliveryState,
+      deliveryZip,
+      deliveryDate,
+      rentalDays: parseInt(rentalDays),
+      dumpsterTypeId,
+      specialInstructions,
+    });
+  };
+
   // Filter bookings
   const filteredBookings = bookings?.filter((booking) => {
     const matchesSearch =
@@ -119,7 +203,10 @@ export default function BookingsManagement() {
             <header className="flex items-center justify-between p-4 border-b">
               <SidebarTrigger />
               <h1 className="text-2xl font-semibold">Bookings Management</h1>
-              <div className="w-10"></div>
+              <Button onClick={() => setCreateDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Booking
+              </Button>
             </header>
 
             <main className="flex-1 overflow-auto p-6">
@@ -350,6 +437,166 @@ export default function BookingsManagement() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Booking Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Booking</DialogTitle>
+            <DialogDescription>
+              Add a new booking to the system
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Customer Information */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium">Customer Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="customerName">Customer Name *</Label>
+                  <Input
+                    id="customerName"
+                    placeholder="John Doe"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customerPhone">Phone *</Label>
+                  <Input
+                    id="customerPhone"
+                    placeholder="(555) 123-4567"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="customerEmail">Email *</Label>
+                <Input
+                  id="customerEmail"
+                  type="email"
+                  placeholder="john@example.com"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Delivery Information */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium">Delivery Information</h3>
+              <div className="space-y-2">
+                <Label htmlFor="deliveryAddress">Street Address *</Label>
+                <Input
+                  id="deliveryAddress"
+                  placeholder="123 Main St"
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="deliveryCity">City *</Label>
+                  <Input
+                    id="deliveryCity"
+                    placeholder="Dallas"
+                    value={deliveryCity}
+                    onChange={(e) => setDeliveryCity(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="deliveryState">State *</Label>
+                  <Input
+                    id="deliveryState"
+                    placeholder="TX"
+                    maxLength={2}
+                    value={deliveryState}
+                    onChange={(e) => setDeliveryState(e.target.value.toUpperCase())}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="deliveryZip">ZIP Code *</Label>
+                  <Input
+                    id="deliveryZip"
+                    placeholder="75001"
+                    value={deliveryZip}
+                    onChange={(e) => setDeliveryZip(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Rental Details */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium">Rental Details</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="dumpsterType">Dumpster Type *</Label>
+                  <Select value={dumpsterTypeId} onValueChange={setDumpsterTypeId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select dumpster type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dumpsterTypes?.map((type) => (
+                        <SelectItem key={type.id} value={type.id}>
+                          {type.name} - ${Number(type.weeklyRate).toFixed(2)}/week
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rentalDays">Rental Days *</Label>
+                  <Input
+                    id="rentalDays"
+                    type="number"
+                    min="1"
+                    value={rentalDays}
+                    onChange={(e) => setRentalDays(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deliveryDate">Delivery Date *</Label>
+                <Input
+                  id="deliveryDate"
+                  type="date"
+                  value={deliveryDate}
+                  onChange={(e) => setDeliveryDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="specialInstructions">Special Instructions</Label>
+                <Textarea
+                  id="specialInstructions"
+                  placeholder="Any special delivery instructions..."
+                  rows={3}
+                  value={specialInstructions}
+                  onChange={(e) => setSpecialInstructions(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCreateDialogOpen(false);
+                resetForm();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateBooking}
+              disabled={createBookingMutation.isPending}
+            >
+              {createBookingMutation.isPending ? "Creating..." : "Create Booking"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </ProtectedRoute>
