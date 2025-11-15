@@ -33,18 +33,11 @@ export default function AdminSettings() {
   // Fetch platform-wide billing settings (we can store this in a settings table or use defaults)
   const { data: platformSettings } = useQuery({
     queryKey: ["/api/admin/platform-settings"],
-    queryFn: async () => {
-      try {
-        const response = await apiRequest("GET", "/api/admin/platform-settings");
-        return await response.json();
-      } catch (error) {
-        // Return defaults if settings don't exist yet
-        return {
-          defaultSubscriptionAmount: "99.00",
-          defaultBillingCycle: "monthly",
-          defaultTrialDays: 30,
-        };
-      }
+    enabled: false, // Disable for now, will implement endpoint later
+    initialData: {
+      defaultSubscriptionAmount: "99.00",
+      defaultBillingCycle: "monthly",
+      defaultTrialDays: 30,
     },
   });
 
