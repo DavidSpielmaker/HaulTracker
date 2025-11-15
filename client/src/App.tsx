@@ -14,6 +14,7 @@ import CalendarView from "@/pages/CalendarView";
 import Settings from "@/pages/Settings";
 import TeamManagement from "@/pages/TeamManagement";
 import AdminDashboard from "@/pages/AdminDashboard";
+import AdminSettings from "@/pages/AdminSettings";
 import OrganizationForm from "@/pages/OrganizationForm";
 import ApiDocs from "@/pages/ApiDocs";
 
@@ -36,6 +37,7 @@ function Router() {
 
       {/* Super admin routes */}
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/admin/organizations/new" component={OrganizationForm} />
       <Route path="/admin/organizations/:id" component={OrganizationForm} />
 

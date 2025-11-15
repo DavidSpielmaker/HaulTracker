@@ -39,6 +39,7 @@ export interface IStorage {
   getUserByEmailAndOrg(email: string, organizationId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserLastLogin(userId: string): Promise<void>;
+  updateUser(userId: string, data: Partial<User>): Promise<User>;
   verifyPassword(password: string, hash: string): Promise<boolean>;
   hashPassword(password: string): Promise<string>;
 
@@ -147,6 +148,14 @@ export class DbStorage implements IStorage {
     await db.update(users)
       .set({ lastLogin: new Date() })
       .where(eq(users.id, userId));
+  }
+
+  async updateUser(userId: string, data: Partial<User>): Promise<User> {
+    const [updatedUser] = await db.update(users)
+      .set(data)
+      .where(eq(users.id, userId))
+      .returning();
+    return updatedUser;
   }
 
   async verifyPassword(password: string, hash: string): Promise<boolean> {
