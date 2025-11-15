@@ -351,7 +351,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get users for an organization (super admin only)
   app.get("/api/admin/organizations/:id/users", requireAuth, requireRole("super_admin"), async (req: AuthRequest, res) => {
     try {
+      console.log(`[ADMIN] Getting users for organization: ${req.params.id}`);
       const users = await storage.getUsersByOrganization(req.params.id);
+      console.log(`[ADMIN] Found ${users.length} users for organization ${req.params.id}`);
       // Return users without password hashes
       const usersWithoutPasswords = users.map(({ passwordHash, ...user }) => user);
       res.json(usersWithoutPasswords);

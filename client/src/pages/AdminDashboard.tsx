@@ -63,11 +63,14 @@ export default function AdminDashboard() {
     );
   }
 
-  const { data: orgUsers, error: usersError } = useQuery<User[]>({
+  const { data: orgUsers, error: usersError, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/organizations", selectedOrgForUsers, "users"],
     queryFn: async () => {
       if (!selectedOrgForUsers) return [];
-      return await apiRequest("GET", `/api/admin/organizations/${selectedOrgForUsers}/users`);
+      console.log(`Fetching users for organization: ${selectedOrgForUsers}`);
+      const users = await apiRequest("GET", `/api/admin/organizations/${selectedOrgForUsers}/users`);
+      console.log(`Received ${users?.length || 0} users:`, users);
+      return users;
     },
     enabled: !!selectedOrgForUsers,
   });
@@ -79,6 +82,11 @@ export default function AdminDashboard() {
   if (usersError) {
     console.error("Error loading users:", usersError);
   }
+
+  // Log users data for debugging
+  console.log('Selected org for users:', selectedOrgForUsers);
+  console.log('Org users data:', orgUsers);
+  console.log('Users loading:', usersLoading);
 
   const inviteUserMutation = useMutation({
     mutationFn: async (data: {
@@ -332,7 +340,16 @@ export default function AdminDashboard() {
                 </div>
               </CardHeader>
               <CardContent>
-                {orgUsers && orgUsers.length > 0 ? (
+                {usersLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Loading users...</p>
+                  </div>
+                ) : usersError ? (
+                  <div className="text-center py-8 text-destructive">
+                    <p>Error loading users</p>
+                    <p className="text-sm mt-1">{usersError instanceof Error ? usersError.message : 'Unknown error'}</p>
+                  </div>
+                ) : orgUsers && orgUsers.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
