@@ -6,6 +6,7 @@ import { z } from "zod";
 // Enums
 export const userRoleEnum = pgEnum("user_role", ["super_admin", "org_owner", "org_admin", "customer"]);
 export const organizationStatusEnum = pgEnum("organization_status", ["active", "suspended", "trial"]);
+export const billingCycleEnum = pgEnum("billing_cycle", ["monthly", "quarterly", "annual"]);
 export const dumpsterStatusEnum = pgEnum("dumpster_status", ["available", "rented", "maintenance", "retired"]);
 export const bookingStatusEnum = pgEnum("booking_status", ["pending", "confirmed", "delivered", "picked_up", "completed", "cancelled"]);
 export const paymentMethodEnum = pgEnum("payment_method", ["credit_card", "debit_card", "ach"]);
@@ -32,6 +33,11 @@ export const organizations = pgTable("organizations", {
   taxRate: decimal("tax_rate", { precision: 5, scale: 4 }).default("0.0000"),
   stripeAccountId: text("stripe_account_id"),
   status: organizationStatusEnum("status").default("trial").notNull(),
+  // Billing fields
+  subscriptionAmount: decimal("subscription_amount", { precision: 10, scale: 2 }),
+  billingCycle: billingCycleEnum("billing_cycle"),
+  trialEndsAt: timestamp("trial_ends_at"),
+  nextBillingDate: timestamp("next_billing_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
