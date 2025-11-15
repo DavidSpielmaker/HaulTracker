@@ -23,6 +23,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     throw new Error("SESSION_SECRET must be set in production");
   }
 
+  // Trust proxy for Render deployment
+  if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+
   // Session middleware with enhanced security
   app.use(
     session({
@@ -34,6 +39,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       secret: process.env.SESSION_SECRET || "dev-secret-change-in-production",
       resave: false,
       saveUninitialized: false,
+      proxy: process.env.NODE_ENV === "production", // Trust proxy for cookie handling
       name: "sessionId", // Don't use default 'connect.sid'
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
