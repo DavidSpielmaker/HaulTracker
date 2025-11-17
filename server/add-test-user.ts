@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { organizations, users, organizationSettings, dumpsterTypes, dumpsterInventory, serviceAreas } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { organizations, users, organizationSettings, dumpsterTypes, dumpsterInventory, serviceAreas, bookings } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 async function addTestOrg() {
@@ -169,6 +169,95 @@ async function addTestOrg() {
     console.log(`✅ Created ${testServiceAreas.length} service areas`);
   } else {
     console.log("✅ Service areas already exist");
+  }
+
+  // Create test bookings if they don't exist
+  const existingBookings = await db.select().from(bookings)
+    .where(eq(bookings.organizationId, testOrg.id));
+
+  if (existingBookings.length === 0 && existingTypes.length > 0) {
+    console.log("Creating test bookings...");
+
+    // Get the dumpster types for reference
+    const types = await db.select().from(dumpsterTypes)
+      .where(eq(dumpsterTypes.organizationId, testOrg.id));
+
+    const testBookings = [
+      {
+        organizationId: testOrg.id,
+        dumpsterTypeId: types[0].id,
+        bookingNumber: `BK-${Date.now()}-001`,
+        status: "confirmed" as const,
+        customerName: "John Smith",
+        customerEmail: "john.smith@email.com",
+        customerPhone: "(555) 234-5678",
+        deliveryAddress: "123 Main Street",
+        deliveryCity: "Dallas",
+        deliveryState: "TX",
+        deliveryZip: "75001",
+        deliveryDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
+        rentalDays: 7,
+        baseRate: types[0].weeklyRate,
+        dailyRate: types[0].dailyRate,
+        deliveryFee: "50.00",
+        subtotal: "400.00",
+        taxAmount: "33.00",
+        totalAmount: "433.00",
+        balanceDue: "433.00",
+        specialInstructions: "Please place dumpster in driveway",
+      },
+      {
+        organizationId: testOrg.id,
+        dumpsterTypeId: types[1]?.id || types[0].id,
+        bookingNumber: `BK-${Date.now()}-002`,
+        status: "pending" as const,
+        customerName: "Sarah Johnson",
+        customerEmail: "sarah.j@email.com",
+        customerPhone: "(555) 345-6789",
+        deliveryAddress: "456 Oak Avenue",
+        deliveryCity: "Dallas",
+        deliveryState: "TX",
+        deliveryZip: "75002",
+        deliveryDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days from now
+        rentalDays: 14,
+        baseRate: types[1]?.weeklyRate || types[0].weeklyRate,
+        dailyRate: types[1]?.dailyRate || types[0].dailyRate,
+        deliveryFee: "50.00",
+        subtotal: "1050.00",
+        taxAmount: "86.63",
+        totalAmount: "1136.63",
+        balanceDue: "1136.63",
+        specialInstructions: "Call before delivery",
+      },
+      {
+        organizationId: testOrg.id,
+        dumpsterTypeId: types[0].id,
+        bookingNumber: `BK-${Date.now()}-003`,
+        status: "delivered" as const,
+        customerName: "Mike Davis",
+        customerEmail: "mike.davis@email.com",
+        customerPhone: "(555) 456-7890",
+        deliveryAddress: "789 Pine Street",
+        deliveryCity: "Test City",
+        deliveryState: "TX",
+        deliveryZip: "75006",
+        deliveryDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+        rentalDays: 7,
+        baseRate: types[0].weeklyRate,
+        dailyRate: types[0].dailyRate,
+        deliveryFee: "55.00",
+        subtotal: "405.00",
+        taxAmount: "33.41",
+        totalAmount: "438.41",
+        amountPaid: "438.41",
+        balanceDue: "0.00",
+      },
+    ];
+
+    await db.insert(bookings).values(testBookings);
+    console.log(`✅ Created ${testBookings.length} test bookings`);
+  } else if (existingBookings.length > 0) {
+    console.log("✅ Test bookings already exist");
   }
 
   console.log("\n✨ Test organization setup complete!");
