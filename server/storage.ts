@@ -330,16 +330,15 @@ export class DbStorage implements IStorage {
         eq(dumpsterInventory.status, "available")
       ));
 
-    // Calculate monthly revenue
+    // Calculate monthly revenue (sum of amount paid for bookings created this month)
     const revenueResult = await db.select({
-      total: sum(bookings.totalAmount)
+      total: sum(bookings.amountPaid)
     })
       .from(bookings)
       .where(and(
         eq(bookings.organizationId, organizationId),
-        gte(bookings.deliveryDate, monthStart),
-        lte(bookings.deliveryDate, monthEnd),
-        eq(bookings.paymentStatus, "paid")
+        gte(bookings.createdAt, monthStart),
+        lte(bookings.createdAt, monthEnd)
       ));
 
     return {
